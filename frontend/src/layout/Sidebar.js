@@ -14,6 +14,7 @@ import {
   useTheme,
   Tooltip
 } from '@mui/material';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -31,8 +32,8 @@ const drawerWidth = 240;
 
 // Main navigation items
 const mainNavItems = [
-  { name: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { name: 'Employees', icon: <PeopleIcon />, path: '/employees' },
+  { name: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard'},
+  { name: 'Attendance', icon: <EventAvailableIcon />, path: '/attendance' },
   { name: 'Projects', icon: <WorkIcon />, path: '/projects' },
   { name: 'Tasks', icon: <TaskIcon />, path: '/tasks' },
   { name: 'Reports', icon: <BarChartIcon />, path: '/reports' },

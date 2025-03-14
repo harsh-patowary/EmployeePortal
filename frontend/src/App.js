@@ -9,6 +9,8 @@ import ProjectsPage from './pages/ProjectsPage';
 import TasksPage from './pages/TasksPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import AttendanceDashboard from './features/attendance/pages/AttendanceDashboard';
+import EmployeeAttendancePage from './features/attendance/pages/EmployeeAttendancePage';
 import { useSelector } from 'react-redux';
 
 function App() {
@@ -27,6 +29,8 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               {/* <Route path="/employees" element={<EmployeeDashboard />} /> */}
+              <Route path='/attendance' element={<AttendanceDashboard />} />
+              <Route path="/attendance/:employeeId" element={<EmployeeAttendancePage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="/reports" element={<ReportsPage />} />
