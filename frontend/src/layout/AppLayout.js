@@ -121,7 +121,7 @@ function AppLayout() {
           p: 3,
           mt: 8, // To account for AppBar height
           width: { sm: `calc(100% - ${sidebarOpen ? 140 : 0}px)` },
-          ml: { sm: sidebarOpen ? '240px' : 0 },
+          ml: { sm: sidebarOpen ? '100px' : 0 },
           transition: theme.transitions.create(['margin', 'width'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
