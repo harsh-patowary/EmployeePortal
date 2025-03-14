@@ -1,0 +1,13 @@
+frontend/
+├── src/
+│   ├── assets/                
+│   ├── components/            
+│   ├── features/              
+│   ├── layout/                # New folder for layout components
+│   │   └── Sidebar.js         # Sidebar for navigation
+│   ├── pages/                 
+│   ├── redux/                 
+│   ├── services/              
+│   ├── utils/                 
+│   └── App.js                 
+└── package.json

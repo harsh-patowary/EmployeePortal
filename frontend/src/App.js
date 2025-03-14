@@ -1,57 +1,88 @@
 import React from 'react';
-import logo from './logo.svg';
-import { Counter } from './features/counter/Counter';
-import './App.css';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import AppLayout from './layout/AppLayout';
+import LoginPage from './pages/LoginPage'; // Make sure the filename matches
+import DashboardPage from './pages/DashboardPage';
+import { useSelector } from 'react-redux';
+
+// Create a theme instance
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2', // Primary color
+      light: '#42a5f5',
+      dark: '#1565c0',
+    },
+    secondary: {
+      main: '#f50057', // Secondary color
+      light: '#ff4081',
+      dark: '#c51162',
+    },
+    background: {
+      default: '#f5f5f5', // Page background color
+      paper: '#ffffff', // Paper/card background color
+    },
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 500,
+    },
+    button: {
+      textTransform: 'none', // Prevents automatic uppercase in buttons
+    },
+  },
+  shape: {
+    borderRadius: 8, // Global border radius
+  },
+  components: {
+    // Customize individual components
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          boxShadow: 'none', // Remove button shadows
+          '&:hover': {
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+          },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.08)',
+        },
+      },
+    },
+  },
+});
 
 function App() {
+  const isAuthenticated = useSelector(state => state.auth.token);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <Counter />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <span>
-          <span>Learn </span>
-          <a
-            className="App-link"
-            href="https://reactjs.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            React
-          </a>
-          <span>, </span>
-          <a
-            className="App-link"
-            href="https://redux.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Redux
-          </a>
-          <span>, </span>
-          <a
-            className="App-link"
-            href="https://redux-toolkit.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Redux Toolkit
-          </a>
-          ,<span> and </span>
-          <a
-            className="App-link"
-            href="https://react-redux.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            React Redux
-          </a>
-        </span>
-      </header>
-    </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline /> {/* Normalizes styles across browsers */}
+      <Router>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<LoginPage />} />
+
+          {/* Protected Routes */}
+          {isAuthenticated ? (
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              {/* <Route path="/employees" element={<EmployeeDashboard />} /> */}
+            </Route>
+          ) : (
+            <Route path="*" element={<LoginPage />} />
+          )}
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
 
