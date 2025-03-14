@@ -7,8 +7,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Employee
-from .serializers import RegisterSerializer, UserSerializer, EmployeeSerializer
+from apps.employees.models import Employee
+from apps.employees.serializers import RegisterSerializer, UserSerializer, EmployeeSerializer
 
 User = get_user_model()
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
+import companyLogo from '../assets/logos/company-logo.svg';
 import { loginSuccess } from '../redux/authSlice';
 import { loginUser } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
@@ -42,7 +43,7 @@ function LoginPage() {
   return (
     <Container component="main" maxWidth="xs">
       <Paper 
-        elevation={3} 
+        elevation={5} 
         sx={{ 
           p: 4, 
           mt: 8, 
@@ -57,14 +58,16 @@ function LoginPage() {
             alignItems: 'center',
           }}
         >
-          <Avatar sx={{ 
-            bgcolor: theme.palette.primary.main,
-            width: 56, 
-            height: 56,
-            mb: 2 
-          }}>
-            <LockOutlinedIcon fontSize="large" />
-          </Avatar>
+          <Box
+            component="img"
+            src={companyLogo}
+            alt="Company Logo"
+            sx={{
+              width: 120,
+              height: 'auto',
+              mb: 3
+            }}
+          />
           
           <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
             Employee Portal Login
@@ -118,7 +121,7 @@ function LoginPage() {
       
       <Box sx={{ mt: 4, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          © {new Date().getFullYear()} Employee Management System
+          © {new Date().getFullYear()} Harsh Patowary. All rights reserved.
         </Typography>
       </Box>
     </Container>

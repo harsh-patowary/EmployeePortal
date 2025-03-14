@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Box, Paper, Grid, Card, CardContent, CardHeader, LinearProgress } from '@mui/material';
+import { Typography, Box, Paper, Grid, Card, CardContent, CardHeader, LinearProgress, Grid2 } from '@mui/material';
 
 function ProjectsPage() {
   // Sample projects data - replace with actual data in production
@@ -16,8 +16,7 @@ function ProjectsPage() {
       <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
         Overview of all company projects
       </Typography>
-
-      <Grid container spacing={3}>
+      <Grid2 container spacing={3}>
         {projects.map((project) => (
           <Grid item xs={12} md={6} key={project.id}>
             <Paper 
@@ -45,7 +44,7 @@ function ProjectsPage() {
                           borderRadius: 5,
                           backgroundColor: 'rgba(0,0,0,0.1)',
                           '& .MuiLinearProgress-bar': {
-                            backgroundColor: project.progress === 100 ? 'success.main' : 'primary.main',
+                            backgroundColor: project.progress === 100 ? 'success.main' : project.progress > 50 ? 'progress.main' : 'error.main',
                           }
                         }}
                       />
@@ -59,7 +58,7 @@ function ProjectsPage() {
             </Paper>
           </Grid>
         ))}
-      </Grid>
+      </Grid2>
     </Box>
   );
 }
