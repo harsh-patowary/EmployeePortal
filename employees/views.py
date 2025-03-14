@@ -18,6 +18,8 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
+
+
 # Login View - Returns JWT tokens
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -29,6 +31,9 @@ class LoginView(APIView):
         user = authenticate(username=username, password=password)
         if user:
             refresh = RefreshToken.for_user(user)
+            print(f"refresh: {refresh}\n")
+            
+            print(f"token: {str(refresh.access_token)}\n")
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),

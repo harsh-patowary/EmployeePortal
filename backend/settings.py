@@ -91,7 +91,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'companydata',
         'USER': 'postgres',
-        'PASSWORD': 'admin',
+        'PASSWORD': 'admin@123',
         'HOST': 'localhost',
         'PORT': '5432',
     }
@@ -117,7 +117,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = 'employees.CustomUser'
+AUTH_USER_MODEL = 'auth.User'
 
 
 

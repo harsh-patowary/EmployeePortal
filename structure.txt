@@ -14,3 +14,5 @@ frontend/
 
 
 gitlab_token: glpat-u47YXpDXdgh5iivCpq1o
+
+superuser: root | toor
