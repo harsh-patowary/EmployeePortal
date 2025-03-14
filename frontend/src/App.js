@@ -1,70 +1,21 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProviderWrapper } from './theme/ThemeContext';
 import AppLayout from './layout/AppLayout';
-import LoginPage from './pages/LoginPage'; // Make sure the filename matches
+import LoginPage from './pages/Loginpage';
 import DashboardPage from './pages/DashboardPage';
+// import EmployeeDashboard from './pages/EmployeeDashboard';
+import ProjectsPage from './pages/ProjectsPage';
+import TasksPage from './pages/TasksPage';
+import ReportsPage from './pages/ReportsPage';
+import SettingsPage from './pages/SettingsPage';
 import { useSelector } from 'react-redux';
-
-// Create a theme instance
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2', // Primary color
-      light: '#42a5f5',
-      dark: '#1565c0',
-    },
-    secondary: {
-      main: '#f50057', // Secondary color
-      light: '#ff4081',
-      dark: '#c51162',
-    },
-    background: {
-      default: '#f5f5f5', // Page background color
-      paper: '#ffffff', // Paper/card background color
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
-      fontWeight: 500,
-    },
-    button: {
-      textTransform: 'none', // Prevents automatic uppercase in buttons
-    },
-  },
-  shape: {
-    borderRadius: 8, // Global border radius
-  },
-  components: {
-    // Customize individual components
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          boxShadow: 'none', // Remove button shadows
-          '&:hover': {
-            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-          },
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.08)',
-        },
-      },
-    },
-  },
-});
 
 function App() {
   const isAuthenticated = useSelector(state => state.auth.token);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Normalizes styles across browsers */}
+    <ThemeProviderWrapper>
       <Router>
         <Routes>
           {/* Public Routes */}
@@ -76,13 +27,17 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               {/* <Route path="/employees" element={<EmployeeDashboard />} /> */}
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
           ) : (
             <Route path="*" element={<LoginPage />} />
           )}
         </Routes>
       </Router>
-    </ThemeProvider>
+    </ThemeProviderWrapper>
   );
 }
 

@@ -1,36 +1,215 @@
-import React, { useState } from 'react';
-import { Drawer, List, ListItem, ListItemText, IconButton } from '@mui/material';
-import { Link } from 'react-router-dom';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import {
+  Box,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Typography,
+  useTheme,
+  Tooltip
+} from '@mui/material';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import PeopleIcon from '@mui/icons-material/People';
+import SettingsIcon from '@mui/icons-material/Settings';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import LayersIcon from '@mui/icons-material/Layers';
+import LogoutIcon from '@mui/icons-material/Logout';
+import EmailIcon from '@mui/icons-material/Email';
+import TaskIcon from '@mui/icons-material/Task';
+import WorkIcon from '@mui/icons-material/Work';
+import HelpIcon from '@mui/icons-material/Help';
+import { logout } from '../redux/authSlice';
 
-function Sidebar() {
-  const [open, setOpen] = useState(false);
+// Fixed width for the drawer
+const drawerWidth = 240;
 
-  const toggleDrawer = () => {
-    setOpen(!open);
+// Main navigation items
+const mainNavItems = [
+  { name: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+  { name: 'Employees', icon: <PeopleIcon />, path: '/employees' },
+  { name: 'Projects', icon: <WorkIcon />, path: '/projects' },
+  { name: 'Tasks', icon: <TaskIcon />, path: '/tasks' },
+  { name: 'Reports', icon: <BarChartIcon />, path: '/reports' },
+];
+
+// External apps/services
+const externalApps = [
+  { name: 'Email', icon: <EmailIcon />, path: 'https://mail.example.com', external: true },
+  { name: 'Documentation', icon: <HelpIcon />, path: 'https://docs.example.com', external: true },
+  { name: 'Company Portal', icon: <LayersIcon />, path: 'https://portal.example.com', external: true },
+];
+
+function Sidebar({ open, onClose }) {
+  const theme = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const handleNavigation = (path, external = false) => {
+    if (external) {
+      window.open(path, '_blank');
+    } else {
+      navigate(path);
+      if (onClose && window.innerWidth < theme.breakpoints.values.md) {
+        onClose();
+      }
+    }
   };
 
-  return (
-    <div>
-      <IconButton onClick={toggleDrawer}>
-        <MenuIcon />
-      </IconButton>
-      <Drawer
-        anchor="left"
-        open={open}
-        onClose={toggleDrawer}
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
+
+  const drawer = (
+    <Box sx={{ overflowY: 'auto', height: '100%' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          py: 2,
+          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.primary.contrastText,
+        }}
       >
-        <List>
-          <ListItem button component={Link} to="/dashboard">
-            <ListItemText primary="Dashboard" />
+        <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
+          EMS Portal
+        </Typography>
+      </Box>
+      
+      <Divider />
+      
+      {/* Main Navigation */}
+      <List>
+        {mainNavItems.map((item) => (
+          <ListItem key={item.name} disablePadding>
+            <ListItemButton 
+              selected={location.pathname === item.path}
+              onClick={() => handleNavigation(item.path)}
+              sx={{
+                '&.Mui-selected': {
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.04)',
+                  borderLeft: `4px solid ${theme.palette.primary.main}`,
+                  '&:hover': {
+                    backgroundColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.12)'
+                      : 'rgba(0, 0, 0, 0.08)',
+                  },
+                },
+              }}
+            >
+              <ListItemIcon sx={{ color: location.pathname === item.path ? theme.palette.primary.main : 'inherit' }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.name} />
+            </ListItemButton>
           </ListItem>
-          <ListItem button component={Link} to="/employees">
-            <ListItemText primary="Employees" />
-          </ListItem>
-          {/* Add more links as needed */}
-        </List>
+        ))}
+      </List>
+      
+      <Divider sx={{ my: 1 }} />
+      
+      {/* External Apps */}
+      <List>
+        <ListItem sx={{ pl: 3, py: 0 }}>
+          <Typography
+            color="textSecondary"
+            variant="caption"
+            sx={{ fontWeight: 700, textTransform: 'uppercase' }}
+          >
+            External Apps
+          </Typography>
+        </ListItem>
+        
+        {externalApps.map((item) => (
+          <Tooltip key={item.name} title={`Open ${item.name} in new tab`} placement="right">
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => handleNavigation(item.path, item.external)}>
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.name} />
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
+        ))}
+      </List>
+      
+      <Divider sx={{ my: 1 }} />
+      
+      {/* Settings and Logout */}
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => handleNavigation('/settings')}>
+            <ListItemIcon>
+              <SettingsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Settings" />
+          </ListItemButton>
+        </ListItem>
+        
+        <ListItem disablePadding>
+          <ListItemButton onClick={handleLogout}>
+            <ListItemIcon sx={{ color: theme.palette.error.main }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Logout" 
+              sx={{ color: theme.palette.error.main }}
+            />
+          </ListItemButton>
+        </ListItem>
+      </List>
+    </Box>
+  );
+
+  return (
+    <Box
+      component="nav"
+      sx={{ width: { sm: open ? drawerWidth : 0 }, flexShrink: { sm: 0 } }}
+    >
+      {/* Mobile drawer */}
+      <Drawer
+        variant="temporary"
+        open={open}
+        onClose={onClose}
+        ModalProps={{ keepMounted: true }} // Better mobile performance
+        sx={{
+          display: { xs: 'block', sm: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', 
+            width: drawerWidth,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+          },
+        }}
+      >
+        {drawer}
       </Drawer>
-    </div>
+      
+      {/* Desktop drawer */}
+      <Drawer
+        variant="persistent"
+        open={open}
+        sx={{
+          display: { xs: 'none', sm: 'none', md: 'block' },
+          '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', 
+            width: drawerWidth,
+            borderRight: `1px solid ${theme.palette.divider}`,
+            boxShadow: open ? '2px 0 10px rgba(0,0,0,0.05)' : 'none'
+          },
+        }}
+      >
+        {drawer}
+      </Drawer>
+    </Box>
   );
 }
 
