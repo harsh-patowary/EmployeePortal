@@ -113,6 +113,7 @@ function AppLayout() {
       <Sidebar open={sidebarOpen} onClose={handleSidebarToggle} />
       
       {/* Main Content */}
+      
       <Box
         component="main"
         sx={{
