@@ -1,0 +1,2 @@
+work on attendance branch and solve the error integrate each feature in same struct 
+if nothing works restructure everything like flutter project
