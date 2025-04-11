@@ -5,8 +5,10 @@ import {
   TextField,
   MenuItem,
   Grid,
-  Paper,
-  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   FormControl,
   FormHelperText,
   InputLabel,
@@ -25,7 +27,7 @@ const ATTENDANCE_STATUSES = [
   { value: 'remote', label: 'Working Remote' },
 ];
 
-function AttendanceForm({ initialData = null, employees = [], onSubmit, onCancel }) {
+function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
   const [formData, setFormData] = useState({
     employee: '',
     date: new Date(),
@@ -37,17 +39,33 @@ function AttendanceForm({ initialData = null, employees = [], onSubmit, onCancel
   
   const [errors, setErrors] = useState({});
 
+  // Mock employees data - replace with actual data in production
+  const employees = [
+    { id: 1, first_name: 'John', last_name: 'Doe' },
+    { id: 2, first_name: 'Jane', last_name: 'Smith' },
+  ];
+
   // If editing existing record, populate form with initial data
   useEffect(() => {
-    if (initialData) {
+    if (attendanceRecord) {
       setFormData({
-        ...initialData,
-        date: initialData.date ? new Date(initialData.date) : new Date(),
-        check_in: initialData.check_in ? new Date(`2000-01-01T${initialData.check_in}`) : null,
-        check_out: initialData.check_out ? new Date(`2000-01-01T${initialData.check_out}`) : null,
+        ...attendanceRecord,
+        date: attendanceRecord.date ? new Date(attendanceRecord.date) : new Date(),
+        check_in: attendanceRecord.check_in ? new Date(`2000-01-01T${attendanceRecord.check_in}`) : null,
+        check_out: attendanceRecord.check_out ? new Date(`2000-01-01T${attendanceRecord.check_out}`) : null,
+      });
+    } else {
+      // Reset form when opening for a new record
+      setFormData({
+        employee: '',
+        date: new Date(),
+        check_in: null,
+        check_out: null,
+        status: 'present',
+        notes: '',
       });
     }
-  }, [initialData]);
+  }, [attendanceRecord, open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -126,136 +144,138 @@ function AttendanceForm({ initialData = null, employees = [], onSubmit, onCancel
       check_out: formData.check_out ? format(formData.check_out, 'HH:mm:ss') : null,
     };
     
-    onSubmit(formattedData);
+    onSave(formattedData);
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          {initialData ? 'Edit Attendance Record' : 'Create New Attendance Record'}
-        </Typography>
-        
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth error={!!errors.employee}>
-                <InputLabel id="employee-select-label">Employee</InputLabel>
-                <Select
-                  labelId="employee-select-label"
-                  id="employee-select"
-                  name="employee"
-                  value={formData.employee}
-                  onChange={handleChange}
-                  label="Employee"
-                >
-                  {employees.map(employee => (
-                    <MenuItem key={employee.id} value={employee.id}>
-                      {employee.first_name} {employee.last_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.employee && <FormHelperText>{errors.employee}</FormHelperText>}
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <DatePicker
-                label="Date"
-                value={formData.date}
-                onChange={handleDateChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    error={!!errors.date}
-                    helperText={errors.date}
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>
+        {attendanceRecord ? 'Edit Attendance Record' : 'Create New Attendance Record'}
+      </DialogTitle>
+      
+      <DialogContent>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <Box component="form" noValidate sx={{ mt: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth error={!!errors.employee}>
+                  <InputLabel id="employee-select-label">Employee</InputLabel>
+                  <Select
+                    labelId="employee-select-label"
+                    id="employee-select"
+                    name="employee"
+                    value={formData.employee}
+                    onChange={handleChange}
+                    label="Employee"
+                  >
+                    {employees.map(employee => (
+                      <MenuItem key={employee.id} value={employee.id}>
+                        {employee.first_name} {employee.last_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.employee && <FormHelperText>{errors.employee}</FormHelperText>}
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <DatePicker
+                  label="Date"
+                  value={formData.date}
+                  onChange={handleDateChange}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      error={!!errors.date}
+                      helperText={errors.date}
+                    />
+                  )}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <TimePicker
+                    label="Check-in Time"
+                    value={formData.check_in}
+                    onChange={(time) => handleTimeChange(time, 'check_in')}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={!!errors.check_in}
+                        helperText={errors.check_in}
+                      />
+                    )}
                   />
-                )}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <TimePicker
-                  label="Check-in Time"
-                  value={formData.check_in}
-                  onChange={(time) => handleTimeChange(time, 'check_in')}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={!!errors.check_in}
-                      helperText={errors.check_in}
-                    />
-                  )}
-                />
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <TimePicker
-                  label="Check-out Time"
-                  value={formData.check_out}
-                  onChange={(time) => handleTimeChange(time, 'check_out')}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={!!errors.check_out}
-                      helperText={errors.check_out}
-                    />
-                  )}
-                />
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel id="status-select-label">Status</InputLabel>
-                <Select
-                  labelId="status-select-label"
-                  id="status-select"
-                  name="status"
-                  value={formData.status}
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <TimePicker
+                    label="Check-out Time"
+                    value={formData.check_out}
+                    onChange={(time) => handleTimeChange(time, 'check_out')}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={!!errors.check_out}
+                        helperText={errors.check_out}
+                      />
+                    )}
+                  />
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="status-select-label">Status</InputLabel>
+                  <Select
+                    labelId="status-select-label"
+                    id="status-select"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    label="Status"
+                  >
+                    {ATTENDANCE_STATUSES.map(status => (
+                      <MenuItem key={status.value} value={status.value}>
+                        {status.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  id="notes"
+                  name="notes"
+                  label="Notes"
+                  multiline
+                  rows={3}
+                  value={formData.notes}
                   onChange={handleChange}
-                  label="Status"
-                >
-                  {ATTENDANCE_STATUSES.map(status => (
-                    <MenuItem key={status.value} value={status.value}>
-                      {status.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  fullWidth
+                />
+              </Grid>
             </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                id="notes"
-                name="notes"
-                label="Notes"
-                multiline
-                rows={3}
-                value={formData.notes}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
-            
-            <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-              <Button onClick={onCancel} variant="outlined">
-                Cancel
-              </Button>
-              <Button type="submit" variant="contained" color="primary">
-                {initialData ? 'Update' : 'Save'}
-              </Button>
-            </Grid>
-          </Grid>
-        </Box>
-      </Paper>
-    </LocalizationProvider>
+          </Box>
+        </LocalizationProvider>
+      </DialogContent>
+      
+      <DialogActions>
+        <Button onClick={onClose} variant="outlined">
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit} variant="contained" color="primary">
+          {attendanceRecord ? 'Update' : 'Save'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

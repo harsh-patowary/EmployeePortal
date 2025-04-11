@@ -47,7 +47,7 @@ function AppLayout() {
   };
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex'}}>
       {/* App Bar */}
       <AppBar 
         position="fixed" 
@@ -113,8 +113,6 @@ function AppLayout() {
       <Sidebar open={sidebarOpen} onClose={handleSidebarToggle} />
       
       {/* Main Content */}
-      
-      
       <Box
         component="main"
         sx={{
@@ -127,6 +125,8 @@ function AppLayout() {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
+          height: 'calc(100vh - 64px)', // Set explicit height based on viewport minus AppBar
+          overflow: 'auto', // Enable scrolling at the main content level
         }}
       >
         <Outlet />
