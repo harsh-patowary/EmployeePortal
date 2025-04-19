@@ -22,6 +22,7 @@ import Sidebar from './Sidebar';
 import { logout } from '../redux/authSlice';
 
 function AppLayout() {
+  console.log("--- Rendering AppLayout ---");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);

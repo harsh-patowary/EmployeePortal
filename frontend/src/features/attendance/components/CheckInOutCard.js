@@ -37,23 +37,17 @@ function CheckInOutCard({ employeeId, todayRecord, onAttendanceRecorded }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await attendanceService.checkIn(employeeId);
+      // Call service without employeeId
+      const response = await attendanceService.checkIn(); 
       setSuccess('Check-in recorded successfully!');
       
-      // If the API returns the updated record, use it immediately
-      if (response && response.record) {
-        // Immediately update the UI with the new record
-        if (onAttendanceRecorded) {
-          onAttendanceRecorded(response.record); // Pass the record from response
-        }
-      } else {
-        // Fall back to fetching all records
-        if (onAttendanceRecorded) {
-          onAttendanceRecorded();
-        }
+      // Use the record from the response
+      if (response && response.record && onAttendanceRecorded) {
+        onAttendanceRecorded(response.record); 
+      } else if (onAttendanceRecorded) {
+         onAttendanceRecorded(); // Fallback to general refresh
       }
       
-      // Auto-hide success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError('Failed to record check-in. Please try again.');
@@ -68,23 +62,17 @@ function CheckInOutCard({ employeeId, todayRecord, onAttendanceRecorded }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await attendanceService.checkOut(employeeId);
+      // Call service without employeeId
+      const response = await attendanceService.checkOut(); 
       setSuccess('Check-out recorded successfully!');
-      
-      // If the API returns the updated record, use it immediately
-      if (response && response.record) {
-        // Immediately update the UI with the new record
-        if (onAttendanceRecorded) {
-          onAttendanceRecorded(response.record); // Pass the record from response
-        }
-      } else {
-        // Fall back to fetching all records
-        if (onAttendanceRecorded) {
-          onAttendanceRecorded();
-        }
+
+      // Use the record from the response
+      if (response && response.record && onAttendanceRecorded) {
+        onAttendanceRecorded(response.record);
+      } else if (onAttendanceRecorded) {
+         onAttendanceRecorded(); // Fallback to general refresh
       }
-      
-      // Auto-hide success message after 3 seconds
+
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError('Failed to record check-out. Please try again.');

@@ -1,19 +1,66 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { fetchEmployee } from '../services/employeeService';
 
-// Create async thunk for fetching employee data
-export const fetchEmployeeData = createAsyncThunk(
-  'employee/fetchEmployeeData',
+// Import your service functions correctly
+import { getUserDetails, getManagerTeam, getAllEmployees } from '../services/employeeService'; 
+
+// Thunk to fetch user details
+export const fetchUserDetails = createAsyncThunk(
+  'employee/fetchUserDetails',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetchEmployee();
-      console.log('Fetched employee data in thunk:', response);
-      return response;
+      const data = await getUserDetails();
+      console.log("Fetched user details:", data);
+      return data;
     } catch (error) {
-      console.error('Error in fetchEmployeeData:', error);
       return rejectWithValue(error.message);
     }
   }
+);
+
+// Thunk to fetch manager's team
+export const fetchManagerTeam = createAsyncThunk(
+  'employee/fetchManagerTeam',
+  async (_, { rejectWithValue, getState }) => {
+    // Only fetch if the user is a manager
+    const user = getState().employee.user; // Get user state safely
+    // Check if user exists before accessing properties
+    if (!user || (!user.is_manager && !['manager', 'admin', 'hr', 'director'].includes(user.role))) {
+        console.log("Skipping fetchManagerTeam: User is not a manager or user data not loaded.");
+        return []; // Don't fetch for non-managers or if user isn't loaded
+    }
+    try {
+      const data = await getManagerTeam();
+      console.log("Fetched manager team:", data);
+      return data; // Should be the array of team members
+    } catch (error) {
+      // Handle specific errors like 403
+      if (error.response?.status === 403) {
+          console.warn("fetchManagerTeam rejected with 403: User likely lacks permissions.");
+          return rejectWithValue("Permission denied");
+      }
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Thunk to fetch all employees (for Admin/HR)
+export const fetchAllEmployees = createAsyncThunk(
+    'employee/fetchAllEmployees',
+    async (_, { rejectWithValue, getState }) => {
+        const { role } = getState().employee.user || {};
+        // Only allow Admin/HR/Director roles to fetch all
+        if (!['admin', 'hr', 'director'].includes(role)) {
+            console.warn("User does not have permission to fetch all employees.");
+            return []; 
+        }
+        try {
+            const data = await getAllEmployees();
+            console.log("Fetched all employees under admin/HR :", data);
+            return data;
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
 );
 
 const initialState = {
@@ -22,11 +69,15 @@ const initialState = {
   selectedEmployee: null,
   isLoading: false,
   error: null,
-  roles: {
-    isManager: false,
-    role: 'employee', // Default role
-    permissions: [] // Will be populated based on role
-  }
+  user: null, // Holds the user object fetched from API { id, username, first_name, ..., is_manager, role }
+  isAuthenticated: false,
+  loading: 'idle', // 'idle' | 'pending' | 'succeeded' | 'failed'
+  teamMembers: [],
+  loadingTeam: 'idle',
+  errorTeam: null,
+  allEmployees: [],
+  loadingAllEmployees: 'idle',
+  errorAllEmployees: null,
 };
 
 // Helper function to determine permissions based on role
@@ -77,64 +128,69 @@ const employeeSlice = createSlice({
       state.error = action.payload;
       state.isLoading = false;
     },
-    // Set roles manually if needed
-    setRoles: (state, action) => {
-      state.roles = { ...state.roles, ...action.payload };
-    },
     clearEmployee: (state) => {
       state.currentEmployee = null;
-      state.roles = {
-        isManager: false,
-        role: 'employee',
-        permissions: getRolePermissions('employee')
-      };
-    }
+    },
+    logout: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.teamMembers = []; // Clear team on logout
+      state.allEmployees = []; // Clear all employees on logout
+      // Clear tokens from localStorage here
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user'); // Ensure user is cleared
+    },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchEmployeeData.pending, (state) => {
-        state.isLoading = true;
+      .addCase(fetchUserDetails.pending, (state) => {
+        state.loading = 'pending';
+        state.isAuthenticated = false; // Assume not authenticated until fetch succeeds
+        state.user = null; // Clear previous user data while fetching
+      })
+      .addCase(fetchUserDetails.fulfilled, (state, action) => {
+        state.loading = 'succeeded';
+        state.user = action.payload;
+        state.isAuthenticated = true;
         state.error = null;
+        console.log("User details updated in Redux:", state.user); // Debug log
       })
-      .addCase(fetchEmployeeData.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.currentEmployee = action.payload;
-        
-        // Set employee-based roles with extensive logging
-        if (action.payload) {
-          // First, check the raw is_manager value from the API
-          const rawIsManager = action.payload.is_manager;
-          console.log('Raw is_manager from API:', rawIsManager, typeof rawIsManager);
-          
-          // Convert to boolean regardless of format received (string "true", boolean true, or other)
-          const isManager = 
-            rawIsManager === true || 
-            rawIsManager === 'true' || 
-            rawIsManager === 1 ||
-            action.payload.role === 'manager' ||
-            action.payload.role === 'admin' ||
-            action.payload.role === 'hr' ||
-            action.payload.role === 'director';
-          
-          state.roles.isManager = isManager;
-          
-          // Set the role from backend, defaulting to 'employee' if not present
-          state.roles.role = action.payload.role || 'employee';
-          
-          // Determine permissions based on role
-          state.roles.permissions = getRolePermissions(state.roles.role);
-          
-          console.log('Setting roles in employeeSlice:', {
-            rawIsManager,
-            convertedIsManager: isManager,
-            role: state.roles.role,
-            permissions: state.roles.permissions
-          });
-        }
-      })
-      .addCase(fetchEmployeeData.rejected, (state, action) => {
-        state.isLoading = false;
+      .addCase(fetchUserDetails.rejected, (state, action) => {
+        state.loading = 'failed';
         state.error = action.payload;
+        state.isAuthenticated = false;
+        state.user = null;
+        // Clear tokens if fetch fails? Prevents loops.
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+      })
+      // Manager Team
+      .addCase(fetchManagerTeam.pending, (state) => {
+        state.loadingTeam = 'pending';
+      })
+      .addCase(fetchManagerTeam.fulfilled, (state, action) => {
+        state.loadingTeam = 'succeeded';
+        state.teamMembers = action.payload; // Store the array
+        state.errorTeam = null;
+      })
+      .addCase(fetchManagerTeam.rejected, (state, action) => {
+        state.loadingTeam = 'failed';
+        state.errorTeam = action.payload;
+      })
+      // All Employees
+      .addCase(fetchAllEmployees.pending, (state) => {
+          state.loadingAllEmployees = 'pending';
+      })
+      .addCase(fetchAllEmployees.fulfilled, (state, action) => {
+          state.loadingAllEmployees = 'succeeded';
+          state.allEmployees = action.payload;
+          state.errorAllEmployees = null;
+      })
+      .addCase(fetchAllEmployees.rejected, (state, action) => {
+          state.loadingAllEmployees = 'failed';
+          state.errorAllEmployees = action.payload;
       });
   }
 });
@@ -147,8 +203,8 @@ export const {
   setSelectedEmployee,
   setLoading,
   setError,
-  setRoles,
-  clearEmployee
+  clearEmployee,
+  logout
 } = employeeSlice.actions;
 
 // Selectors
@@ -159,16 +215,38 @@ export const selectEmployeeError = (state) => state.employee.error;
 
 // Role-based selectors
 export const selectIsManager = (state) => {
-  const isManager = state.employee.roles.isManager;
-  console.log('selectIsManager called, current value:', isManager);
-  return isManager;
+  const user = state.employee.user;
+  const isMgr = user ? (user.is_manager === true || ['manager', 'admin', 'hr', 'director'].includes(user.role)) : false;
+  console.log('selectIsManager (employeeSlice) called, user:', user, 'result:', isMgr); // Debug log
+  return isMgr;
 };
 
 // New role-based selectors
-export const selectRole = (state) => state.employee.roles.role;
+export const selectRole = (state) => {
+  const role = state.employee.user?.role || 'employee'; // Default to 'employee' if no user/role
+  console.log('selectRole (employeeSlice) called, user:', state.employee.user, 'result:', role); // Debug log
+  return role;
+};
+
+export const selectPermissions = (state) => {
+  const role = state.employee.user?.role;
+  return role ? getRolePermissions(role) : [];
+};
 
 export const selectHasPermission = (permission) => (state) => {
-  return state.employee.roles.permissions.includes(permission);
+  const userPermissions = selectPermissions(state);
+  return userPermissions.includes(permission);
 };
+
+export const selectUser = (state) => state.employee.user;
+export const selectIsAuthenticated = (state) => state.employee.isAuthenticated;
+export const selectLoading = (state) => state.employee.loading;
+export const selectError = (state) => state.employee.error;
+export const selectUserRole = (state) => state.employee.user?.role;
+
+// New Selectors
+export const selectTeamMembers = (state) => state.employee.teamMembers;
+export const selectLoadingTeam = (state) => state.employee.loadingTeam;
+export const selectLoadingAllEmployees = (state) => state.employee.loadingAllEmployees;
 
 export default employeeSlice.reducer;

@@ -60,16 +60,16 @@ export const selectUser = (state) => {
   return user;
 };
 
-export const selectIsManager = (state) => {
-  const user = state.auth.user;
-  const isManager = user?.is_manager === true;
-  console.log('selectIsManager called:', {
-    userExists: !!user,
-    isManagerValue: user?.is_manager,
-    isManager: isManager
-  });
-  return isManager;
-};
+// export const selectIsManager = (state) => {
+//   const user = state.auth.user;
+//   const isManager = user?.is_manager === true;
+//   console.log('selectIsManager called:', {
+//     userExists: !!user,
+//     isManagerValue: user?.is_manager,
+//     isManager: isManager
+//   });
+//   return isManager;
+// };
 
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
 

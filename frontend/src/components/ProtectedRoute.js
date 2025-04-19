@@ -1,106 +1,66 @@
 import React, { useEffect } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectUser } from '../redux/authSlice';
-import { selectRole, selectIsManager, fetchEmployeeData, selectHasPermission } from '../redux/employeeSlice';
+import { Navigate, useLocation } from 'react-router-dom';
+// Make sure selectError is exported from your slice if you want to check for errors
+import { selectIsAuthenticated, selectLoading, fetchUserDetails, selectError } from '../redux/employeeSlice'; 
+import LoadingSpinner from './LoadingSpinner'; 
 
-/**
- * ProtectedRoute - Route component that protects routes based on authentication and permissions
- */
-const ProtectedRoute = ({ 
-  requiredRole, 
-  requiredPermission, 
-  redirectPath = '/login' 
-}) => {
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError); // Get error state
   const dispatch = useDispatch();
-  const user = useSelector(selectUser);
-  const userRole = useSelector(selectRole);
-  const isManager = useSelector(selectIsManager); // Add this to explicitly check manager status
   const location = useLocation();
-  
-  // Always call the selector, but use a selector that returns undefined if no permission is specified
-  const hasSpecificPermission = useSelector(
-    requiredPermission ? selectHasPermission(requiredPermission) : state => undefined
-  );
-  
-  // Add effect to fetch employee data if needed
+  const token = localStorage.getItem('token');
+
+  // Log state on every render
+  console.log("ProtectedRoute lol State:", { isAuthenticated, loading, error, tokenExists: !!token });
+
   useEffect(() => {
-    // If we have a user but no role data, fetch the employee data
-    if (user && userRole === undefined) {
-      console.log('ProtectedRoute: No role data found, fetching employee data...');
-      dispatch(fetchEmployeeData());
+    // If there's a token but the user isn't authenticated in Redux state, 
+    // and we are not already loading or failed, try fetching user details
+    if (token && !isAuthenticated && loading === 'idle') {
+      console.log("ProtectedRoute Effect: Dispatching fetchUserDetails");
+      dispatch(fetchUserDetails()); 
     }
-  }, [user, userRole, dispatch]);
+    // Optional: Handle case where token exists but fetch failed previously
+    // else if (token && !isAuthenticated && loading === 'failed') {
+    //   console.warn("ProtectedRoute Effect: Auth check failed previously.");
+    //   // Decide if you want to retry or just let it redirect
+    // }
+  }, [token, isAuthenticated, loading, dispatch]);
+
+  // Condition 1: Show loading spinner if explicitly pending
+  if (loading === 'pending') {
+    console.log("ProtectedRoute Decision: Showing LoadingSpinner (pending)");
+    return <LoadingSpinner message="Verifying session..." />; 
+  }
+
+  // Condition 2: Show loading spinner if token exists but we haven't successfully authenticated yet
+  // This covers the initial load state before 'pending' or if 'idle' state persists briefly
+  if (token && !isAuthenticated && loading !== 'failed') {
+     console.log("ProtectedRoute Decision: Showing LoadingSpinner (initial check)");
+     return <LoadingSpinner message="Loading user data..." />;
+  }
   
-  // Enhanced debug information
-  console.log('Protected route check:', { 
-    user: !!user,
-    userId: user?.id,
-    userRole,
-    isManager,
-    requiredRole, 
-    requiredPermission,
-    hasSpecificPermission,
-    path: location.pathname,
-    redux_state: {
-      employee: userRole,
-      isManager
-    }
-  });
-
-  // Not logged in -> redirect to login
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  // Condition 3: Redirect to login if not authenticated AND not loading
+  // This handles cases where there's no token, or fetchUserDetails failed
+  if (!isAuthenticated && loading !== 'pending') {
+    console.log("ProtectedRoute Decision: Redirecting to /login");
+    // Clear token if fetch failed? Optional, depends on your strategy
+    // if (loading === 'failed') localStorage.removeItem('token'); 
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check permission if specified
-  if (requiredPermission !== undefined && !hasSpecificPermission) {
-    return <Navigate to="/dashboard" replace />;
+  // Condition 4: If authenticated, render the children
+  if (isAuthenticated) {
+    console.log("ProtectedRoute Decision: Rendering children");
+    return children;
   }
 
-  // Check role if specified
-  if (requiredRole) {
-    // Add explicit logging for the manager check
-    if (requiredRole === 'manager') {
-      console.log('Checking manager role:', {
-        requiredRole,
-        userRole,
-        isManager,
-        isManagerByRole: ['manager', 'admin', 'director', 'hr'].includes(userRole),
-        result: isManager || ['manager', 'admin', 'director', 'hr'].includes(userRole)
-      });
-    }
-
-    // For backwards compatibility
-    if (requiredRole === 'manager' && userRole === 'employee' && !isManager) {
-      console.log('Redirecting: User is not a manager');
-      return <Navigate to="/my-attendance" replace />;
-    }
-    
-    // More specific role checks
-    const hasRequiredRole = (() => {
-      switch (requiredRole) {
-        case 'admin':
-          return ['admin', 'director'].includes(userRole);
-        case 'hr':
-          return ['hr', 'admin', 'director'].includes(userRole);
-        case 'director':
-          return userRole === 'director';
-        case 'manager':
-          return isManager || ['manager', 'admin', 'director', 'hr'].includes(userRole);
-        default:
-          return true; // Default to allow if role is unspecified or not recognized
-      }
-    })();
-
-    if (!hasRequiredRole) {
-      console.log(`User doesn't have required role: ${requiredRole}`);
-      return <Navigate to="/dashboard" replace />;
-    }
-  }
-
-  // User is authenticated and has proper role/permission
-  return <Outlet />;
+  // Fallback (should ideally not be reached with the logic above)
+  console.warn("ProtectedRoute Decision: Reached fallback, redirecting to login.");
+  return <Navigate to="/login" state={{ from: location }} replace />;
 };
 
 export default ProtectedRoute;

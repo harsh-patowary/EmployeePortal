@@ -1,39 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { selectUser } from '../../../redux/authSlice';
+import { useSelector, useDispatch } from 'react-redux'; // Import useDispatch
 import {
-  Box,
-  Button,
-  TextField,
-  MenuItem,
-  Grid,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  Select,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Grid,
+  TextField, Select, MenuItem, FormControl, InputLabel, CircularProgress, FormHelperText
 } from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { DatePicker, TimePicker } from '@mui/x-date-pickers';
-import { format } from 'date-fns';
-import axios from 'axios';
-import { API_URL, getAuthHeader } from '../../../utils/api';
+import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
+import { format, parseISO } from 'date-fns';
+// Import selectors and actions
+import { selectUser, selectIsManager, selectTeamMembers, selectLoadingTeam, fetchManagerTeam, selectAllEmployees, selectLoadingAllEmployees, fetchAllEmployees, selectUserRole } from '../../../redux/employeeSlice';
+// Remove direct axios/API_URL/getAuthHeader if using Redux thunks or centralized service
+// import axios from 'axios';
+// import { getAuthHeader } from '../../../utils/authUtils';
+// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
-const ATTENDANCE_STATUSES = [
-  { value: 'present', label: 'Present' },
-  { value: 'absent', label: 'Absent' },
-  { value: 'half_day', label: 'Half Day' },
-  { value: 'leave', label: 'Leave' },
-  { value: 'remote', label: 'Working Remote' },
-];
+// Assuming attendanceService exists and uses the api utility
+import attendanceService from '../services/attendanceService'; 
+// Import employee service if NOT using Redux for fetching here
+// import { getManagerTeam, getAllEmployees } from '../../../services/employeeService'; 
 
 function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
+  const dispatch = useDispatch();
   const user = useSelector(selectUser);
-  const isManager = user?.is_manager === true;
+  const isManager = useSelector(selectIsManager);
+  const userRole = useSelector(selectUserRole); // Get the specific role
+
+  // Get team/all employees from Redux state
+  const teamMembers = useSelector(selectTeamMembers);
+  const loadingTeam = useSelector(selectLoadingTeam);
+  const allEmployees = useSelector(selectAllEmployees);
+  const loadingAllEmployees = useSelector(selectLoadingAllEmployees);
 
   const [formData, setFormData] = useState({
     employee: '',
@@ -41,288 +37,238 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
     check_in: null,
     check_out: null,
     status: 'present',
-    notes: '',
+    note: '',
   });
-  
+  const [employees, setEmployees] = useState([]); // Local state to hold the list for the dropdown
+  const [loadingEmployees, setLoadingEmployees] = useState(false); // Use Redux loading state instead if preferred
   const [errors, setErrors] = useState({});
-  const [employees, setEmployees] = useState([]);
-  const [loadingEmployees, setLoadingEmployees] = useState(false);
 
-  // If editing existing record, populate form with initial data
+  // Effect to populate form when editing
   useEffect(() => {
     if (attendanceRecord) {
       setFormData({
-        ...attendanceRecord,
-        date: attendanceRecord.date ? new Date(attendanceRecord.date) : new Date(),
-        check_in: attendanceRecord.check_in ? new Date(`2000-01-01T${attendanceRecord.check_in}`) : null,
-        check_out: attendanceRecord.check_out ? new Date(`2000-01-01T${attendanceRecord.check_out}`) : null,
+        employee: attendanceRecord.employee,
+        date: parseISO(attendanceRecord.date),
+        check_in: attendanceRecord.check_in ? parseISO(attendanceRecord.check_in) : null,
+        check_out: attendanceRecord.check_out ? parseISO(attendanceRecord.check_out) : null,
+        status: attendanceRecord.status,
+        note: attendanceRecord.note || '',
       });
     } else {
-      // Reset form when opening for a new record
+      // Reset form for new record
       setFormData({
-        employee: '',
+        employee: !isManager && user ? user.id : '', // Pre-select user if not manager
         date: new Date(),
         check_in: null,
         check_out: null,
         status: 'present',
-        notes: '',
+        note: '',
       });
     }
-  }, [attendanceRecord, open]);
+  }, [attendanceRecord, open, isManager, user]);
 
-  // Conditionally load employees based on role
+  // Effect to load the correct employee list for the dropdown
   useEffect(() => {
-    const fetchEmployees = async () => {
-      setLoadingEmployees(true);
-      try {
-        if (isManager) {
-          // Managers can select any employee
-          const response = await axios.get(`${API_URL}/employees/employees/`, {
-            headers: getAuthHeader()
-          });
-          setEmployees(response.data);
-        } else {
-          // Non-managers can only select themselves
-          setEmployees([
-            {
-              id: user.id,
-              first_name: user.first_name,
-              last_name: user.last_name
-            }
-          ]);
-          
-          // Automatically set the employee field to the current user
-          setFormData(prev => ({
-            ...prev,
-            employee: user.id
-          }));
-        }
-      } catch (err) {
-        console.error("Failed to fetch employees", err);
-      } finally {
-        setLoadingEmployees(false);
-      }
-    };
+    // Only run if the dialog is open and user data is available
+    if (open && user) {
+        setLoadingEmployees(true); // Indicate loading starts
 
-    if (open) {
-      fetchEmployees();
+        // Determine which list to show based on role
+        let employeeListToShow = [];
+        let isLoading = false;
+
+        if (['admin', 'hr', 'director'].includes(userRole)) {
+            // Admin/HR/Director see all employees
+            employeeListToShow = allEmployees;
+            isLoading = loadingAllEmployees === 'pending';
+            // If data isn't loaded yet, dispatch fetch
+            if (allEmployees.length === 0 && loadingAllEmployees === 'idle') {
+                dispatch(fetchAllEmployees());
+            }
+        } else if (isManager) {
+            // Manager sees their team
+            employeeListToShow = teamMembers;
+            isLoading = loadingTeam === 'pending';
+             // If data isn't loaded yet, dispatch fetch
+            if (teamMembers.length === 0 && loadingTeam === 'idle') {
+                dispatch(fetchManagerTeam());
+            }
+        } else {
+            // Regular employee only sees themselves
+            employeeListToShow = [{
+                id: user.id,
+                first_name: user.first_name,
+                last_name: user.last_name,
+            }];
+            isLoading = false; // No fetching needed
+        }
+
+        console.log("Setting employees for dropdown:", employeeListToShow);
+        setEmployees(employeeListToShow);
+        setLoadingEmployees(isLoading);
+
+        // If user is not a manager, ensure their ID is set
+        if (!isManager && user) {
+             setFormData(prev => ({
+                ...prev,
+                employee: user.id
+             }));
+        }
     }
-  }, [open, isManager, user]);
+  }, [open, user, isManager, userRole, teamMembers, allEmployees, loadingTeam, loadingAllEmployees, dispatch]); // Add dependencies
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear error for this field if exists
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear specific error on change
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
   };
 
-  const handleDateChange = (date) => {
-    setFormData(prev => ({
-      ...prev,
-      date
-    }));
-    
-    // Clear date error if exists
-    if (errors.date) {
-      setErrors(prev => ({ ...prev, date: null }));
-    }
-  };
-
-  const handleTimeChange = (time, field) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: time
-    }));
-    
-    // Clear time field error if exists
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
+  const handleDateChange = (name, date) => {
+    setFormData(prev => ({ ...prev, [name]: date }));
+     if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
     }
   };
 
   const validateForm = () => {
-    const newErrors = {};
-
-    // Employee is required
-    if (!formData.employee) {
-      newErrors.employee = 'Please select an employee';
-    }
-
-    // Date is required
-    if (!formData.date) {
-      newErrors.date = 'Please select a date';
-    }
-
-    // If check-out exists, check-in should also exist
-    if (formData.check_out && !formData.check_in) {
-      newErrors.check_in = 'Check-in time is required if check-out is provided';
-    }
-
-    // Check-out time should be after check-in time
-    if (formData.check_in && formData.check_out && formData.check_out < formData.check_in) {
-      newErrors.check_out = 'Check-out time must be after check-in time';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    let tempErrors = {};
+    if (!formData.employee) tempErrors.employee = "Employee is required.";
+    if (!formData.date) tempErrors.date = "Date is required.";
+    if (!formData.status) tempErrors.status = "Status is required.";
+    // Add more validation as needed (e.g., check_out after check_in)
+    setErrors(tempErrors);
+    return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     if (!validateForm()) return;
-    
-    // Format date and times for API
-    const formattedData = {
-      ...formData,
-      date: format(formData.date, 'yyyy-MM-dd'),
-      check_in: formData.check_in ? format(formData.check_in, 'HH:mm:ss') : null,
-      check_out: formData.check_out ? format(formData.check_out, 'HH:mm:ss') : null,
-    };
-    
-    onSave(formattedData);
-  };
 
-  // Disable employee field for non-managers
-  const employeeFieldDisabled = !isManager || loadingEmployees;
+    const dataToSend = {
+      ...formData,
+      date: format(formData.date, 'yyyy-MM-dd'), // Format date
+      // Format times only if they exist, handle potential invalid dates
+      check_in: formData.check_in && !isNaN(formData.check_in) ? formData.check_in.toISOString() : null,
+      check_out: formData.check_out && !isNaN(formData.check_out) ? formData.check_out.toISOString() : null,
+    };
+
+    try {
+      if (attendanceRecord) {
+        // Update existing record
+        await attendanceService.updateAttendanceRecord(attendanceRecord.id, dataToSend);
+      } else {
+        // Create new record
+        await attendanceService.createAttendanceRecord(dataToSend);
+      }
+      onSave(); // Notify parent component
+      onClose(); // Close dialog
+    } catch (err) {
+      console.error("Failed to save attendance record", err.response?.data || err.message);
+      // You could set a general form error state here
+      setErrors(prev => ({ ...prev, form: 'Failed to save record. Please try again.' }));
+    }
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {attendanceRecord ? 'Edit Attendance Record' : 'Create New Attendance Record'}
-      </DialogTitle>
-      
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>{attendanceRecord ? 'Edit Attendance Record' : 'Add Attendance Record'}</DialogTitle>
       <DialogContent>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <Box component="form" noValidate sx={{ mt: 2 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth error={!!errors.employee} disabled={employeeFieldDisabled}>
-                  <InputLabel id="employee-select-label">Employee</InputLabel>
-                  <Select
-                    labelId="employee-select-label"
-                    id="employee-select"
-                    name="employee"
-                    value={formData.employee}
-                    onChange={handleChange}
-                    label="Employee"
-                  >
-                    {loadingEmployees ? (
-                      <MenuItem disabled>Loading employees...</MenuItem>
-                    ) : (
-                      employees.map(employee => (
-                        <MenuItem key={employee.id} value={employee.id}>
-                          {employee.first_name} {employee.last_name}
-                        </MenuItem>
-                      ))
-                    )}
-                  </Select>
-                  {errors.employee && <FormHelperText>{errors.employee}</FormHelperText>}
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <DatePicker
-                  label="Date"
-                  value={formData.date}
-                  onChange={handleDateChange}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      error={!!errors.date}
-                      helperText={errors.date}
-                    />
-                  )}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <TimePicker
-                    label="Check-in Time"
-                    value={formData.check_in}
-                    onChange={(time) => handleTimeChange(time, 'check_in')}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        error={!!errors.check_in}
-                        helperText={errors.check_in}
-                      />
-                    )}
-                  />
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <TimePicker
-                    label="Check-out Time"
-                    value={formData.check_out}
-                    onChange={(time) => handleTimeChange(time, 'check_out')}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        error={!!errors.check_out}
-                        helperText={errors.check_out}
-                      />
-                    )}
-                  />
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="status-select-label">Status</InputLabel>
-                  <Select
-                    labelId="status-select-label"
-                    id="status-select"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    label="Status"
-                  >
-                    {ATTENDANCE_STATUSES.map(status => (
-                      <MenuItem key={status.value} value={status.value}>
-                        {status.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  id="notes"
-                  name="notes"
-                  label="Notes"
-                  multiline
-                  rows={3}
-                  value={formData.notes}
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <FormControl fullWidth error={!!errors.employee}>
+                <InputLabel id="employee-select-label">Employee</InputLabel>
+                <Select
+                  labelId="employee-select-label"
+                  id="employee"
+                  name="employee"
+                  value={formData.employee}
+                  label="Employee"
                   onChange={handleChange}
-                  fullWidth
-                />
-              </Grid>
+                  disabled={!isManager || loadingEmployees} // Disable for non-managers or while loading
+                >
+                  {loadingEmployees && <MenuItem value=""><CircularProgress size={20} sx={{ ml: 1 }} /> Loading...</MenuItem>}
+                  {!loadingEmployees && employees.length === 0 && <MenuItem value="" disabled>No employees found</MenuItem>}
+                  {!loadingEmployees && employees.map((emp) => (
+                    <MenuItem key={emp.id} value={emp.id}>
+                      {emp.first_name} {emp.last_name} {emp.eID ? `(${emp.eID})` : ''}
+                    </MenuItem>
+                  ))}
+                </Select>
+                 {errors.employee && <FormHelperText>{errors.employee}</FormHelperText>}
+              </FormControl>
             </Grid>
-          </Box>
+
+            {/* Other form fields (Date, Check-in, Check-out, Status, Note) */}
+            {/* ... ensure they use handleDateChange or handleChange ... */}
+             <Grid item xs={12}>
+               <DateTimePicker
+                 label="Date"
+                 value={formData.date}
+                 onChange={(newValue) => handleDateChange('date', newValue)}
+                 renderInput={(params) => <TextField {...params} fullWidth error={!!errors.date} helperText={errors.date} />}
+                 inputFormat="yyyy-MM-dd" // Just date, no time needed here
+                 mask="____-__-__"
+               />
+             </Grid>
+             <Grid item xs={12} sm={6}>
+               <DateTimePicker
+                 label="Check-in Time"
+                 value={formData.check_in}
+                 onChange={(newValue) => handleDateChange('check_in', newValue)}
+                 renderInput={(params) => <TextField {...params} fullWidth error={!!errors.check_in} helperText={errors.check_in} />}
+               />
+             </Grid>
+             <Grid item xs={12} sm={6}>
+               <DateTimePicker
+                 label="Check-out Time"
+                 value={formData.check_out}
+                 onChange={(newValue) => handleDateChange('check_out', newValue)}
+                 renderInput={(params) => <TextField {...params} fullWidth error={!!errors.check_out} helperText={errors.check_out} />}
+                 minDateTime={formData.check_in || undefined} // Ensure check-out is after check-in
+               />
+             </Grid>
+             <Grid item xs={12}>
+               <FormControl fullWidth error={!!errors.status}>
+                 <InputLabel id="status-select-label">Status</InputLabel>
+                 <Select
+                   labelId="status-select-label"
+                   id="status"
+                   name="status"
+                   value={formData.status}
+                   label="Status"
+                   onChange={handleChange}
+                 >
+                   <MenuItem value="present">Present</MenuItem>
+                   <MenuItem value="absent">Absent</MenuItem>
+                   <MenuItem value="leave">Leave</MenuItem>
+                   <MenuItem value="remote">Remote</MenuItem>
+                   <MenuItem value="half_day">Half Day</MenuItem>
+                 </Select>
+                 {errors.status && <FormHelperText>{errors.status}</FormHelperText>}
+               </FormControl>
+             </Grid>
+             <Grid item xs={12}>
+               <TextField
+                 fullWidth
+                 label="Note (Optional)"
+                 name="note"
+                 value={formData.note}
+                 onChange={handleChange}
+                 multiline
+                 rows={3}
+               />
+             </Grid>
+             {errors.form && <Grid item xs={12}><FormHelperText error>{errors.form}</FormHelperText></Grid>}
+          </Grid>
         </LocalizationProvider>
       </DialogContent>
-      
       <DialogActions>
-        <Button onClick={onClose} variant="outlined">
-          Cancel
-        </Button>
-        <Button onClick={handleSubmit} variant="contained" color="primary">
-          {attendanceRecord ? 'Update' : 'Save'}
-        </Button>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained">Save</Button>
       </DialogActions>
     </Dialog>
   );

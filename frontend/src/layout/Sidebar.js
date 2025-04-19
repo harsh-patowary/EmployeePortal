@@ -25,8 +25,7 @@ import EmailIcon from "@mui/icons-material/Email";
 import TaskIcon from "@mui/icons-material/Task";
 import WorkIcon from "@mui/icons-material/Work";
 import HelpIcon from "@mui/icons-material/Help";
-import { logout } from "../redux/authSlice";
-import { selectIsManager } from "../redux/employeeSlice";
+import { selectIsManager, logout } from "../redux/employeeSlice";
 
 // Fixed width for the drawer
 const drawerWidth = 240;
@@ -54,6 +53,7 @@ const externalApps = [
 ];
 
 function Sidebar({ open, onClose }) {
+  console.log("--- Rendering Sidebar ---");
   const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,7 +72,10 @@ function Sidebar({ open, onClose }) {
   };
 
   const handleLogout = () => {
-    dispatch(logout());
+    console.log("Dispatching logout action from employeeSlice"); // Add log
+    dispatch(logout()); // This now dispatches the action from employeeSlice
+    // Clear any other relevant local storage if needed
+    localStorage.removeItem('user'); // Ensure user is removed if authSlice put it there
     navigate("/login");
   };
 

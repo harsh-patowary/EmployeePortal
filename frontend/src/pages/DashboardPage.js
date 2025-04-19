@@ -3,6 +3,7 @@ import { Typography, Box, Paper, Grid, useTheme } from '@mui/material';
 import UserDetailsComponent from '../components/UserComponent';
 import UserRoleDebug from '../components/UserRoleDebug';
 
+
 function DashboardPage() {
   const theme = useTheme(); // Access theme in your component
   
@@ -42,5 +43,7 @@ function DashboardPage() {
     </Box>
   );
 }
+
+
 
 export default DashboardPage;

@@ -96,3 +96,41 @@ def get_user_details(request):
     
     print("Returning user details:", data)
     return Response(data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_manager_team(request):
+    """Get employees managed by the current user (if they're a manager)"""
+    user = request.user
+    try:
+        employee = Employee.objects.get(user=user)
+        
+        # Check if user is a manager
+        if not employee.is_manager and employee.role not in ['manager', 'admin', 'hr', 'director']:
+            return Response(
+                {"error": "You don't have manager permissions"},
+                status=403
+            )
+        
+        # Get direct reports (employees where this user is the manager)
+        team_members = employee.team_members.all()
+        
+        # You might want to add additional data or statistics
+        team_data = {
+            'manager': {
+                'id': employee.id,
+                'name': f"{employee.first_name} {employee.last_name}",
+                'role': employee.role,
+                'department': employee.department,
+            },
+            'team_size': team_members.count(),
+            'team_members': EmployeeSerializer(team_members, many=True).data
+        }
+        
+        return Response(team_data)
+        
+    except Employee.DoesNotExist:
+        return Response(
+            {"error": "Employee profile not found"},
+            status=404
+        )

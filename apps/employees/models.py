@@ -31,7 +31,15 @@ class Employee(models.Model):
     )
     department = models.CharField(max_length=255)
     salary = models.DecimalField(max_digits=10, decimal_places=2)
-    date_hired = models.DateField(null=True, blank=True)    
+    date_hired = models.DateField(null=True, blank=True)
+    # Add this field to your Employee model
+    manager = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='team_members'
+    )
 
     def __str__(self):
         return self.user.username

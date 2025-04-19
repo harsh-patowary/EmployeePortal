@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { selectUser } from '../../../redux/authSlice';
+import { selectUser } from '../../../redux/employeeSlice';
 import { 
   Typography, 
   Box, 
@@ -32,8 +32,10 @@ function EmployeeAttendancePage() {
   } = useAttendance(user?.id, { autoRefresh: true, refreshInterval: 15000 });
   
   // Find today's record using the hard-coded date
-  const targetDate = '2025-04-19'; // Hard-code the expected date format
-  const todayRecord = attendanceRecords.find(record => record.date === targetDate);
+  const today = new Date();
+  const targetDate = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  // const targetDate = '2025-04-19'; // Hard-code the expected date format
+  let todayRecord = attendanceRecords.find(record => record.date === targetDate);
   
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -63,7 +65,7 @@ function EmployeeAttendancePage() {
       // But we can update todayRecord immediately
       if (updatedRecord.date === targetDate) {
         // Force the component to re-render with the updated record
-        todayRecord(updatedRecord);
+        todayRecord = updatedRecord;
       }
     } else {
       // Fall back to standard refresh if no record is provided

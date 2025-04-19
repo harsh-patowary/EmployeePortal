@@ -6,6 +6,8 @@ export const loginUser = async (username, password) => {
   try {
     // Step 1: Login to get token
     const loginResponse = await axios.post(`${API_URL}login/`, { username, password });
+    localStorage.setItem('token', loginResponse.data.access);
+    localStorage.setItem('refreshToken', loginResponse.data.refresh);
     const token = loginResponse.data.access;
     console.log('Login token:', token); // Changed to log just the token, not the full response
     

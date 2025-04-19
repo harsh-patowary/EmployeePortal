@@ -28,6 +28,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import AttendanceList from "../components/AttendanceList";
 import AttendanceForm from "../components/AttendanceForm";
 import attendanceService from '../services/attendanceService'; // Assuming this is where the service is located
+import { isTokenValid, redirectToLogin } from '../../../utils/authUtils';
 
 const AttendanceDashboard = () => {
   const theme = useTheme();
@@ -63,6 +64,13 @@ const AttendanceDashboard = () => {
   // Add useEffect to fetch data
   useEffect(() => {
     const fetchAttendanceData = async () => {
+      // Check token validity before making request
+      if (!isTokenValid()) {
+        console.error('Invalid token, redirecting to login');
+        redirectToLogin();
+        return;
+      }
+      
       try {
         setLoading(true);
         setError(null);
@@ -79,6 +87,9 @@ const AttendanceDashboard = () => {
       } catch (err) {
         console.error('Error fetching attendance data:', err);
         setError('Failed to load attendance data');
+        if (err.response?.status === 401) {
+          redirectToLogin();
+        }
       } finally {
         setLoading(false);
       }
