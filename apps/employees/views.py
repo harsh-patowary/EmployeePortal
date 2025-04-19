@@ -7,6 +7,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from apps.employees.models import Employee
 from apps.employees.serializers import RegisterSerializer, UserSerializer, EmployeeSerializer
 
@@ -38,7 +40,7 @@ class LoginView(APIView):
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
             })
-        return Response({"error": "Invalid Credentials"}, status=400)
+        return Response({"Error": "Invalid Credentials"}, status=400)
 
 
 # Employee Management API
@@ -51,3 +53,46 @@ class EmployeeDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+# Add this new view
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_details(request):
+    """Get current user details including employee info"""
+    user = request.user
+    try:
+        employee = Employee.objects.get(user=user)
+        
+        # Include both the is_manager flag and the new role field
+        is_manager = employee.is_manager
+        role = employee.role
+        
+        # Debug info
+        print(f"Employee {employee.first_name} role: {role}, is_manager: {is_manager}")
+        
+        data = {
+            'id': employee.id,
+            'user_id': user.id,
+            'username': user.username,
+            'first_name': employee.first_name,
+            'last_name': employee.last_name,
+            'email': employee.email,
+            'position': employee.position,
+            'department': employee.department,
+            'is_manager': is_manager,
+            'role': role,  # Include the new role field
+        }
+    except Employee.DoesNotExist:
+        # User doesn't have an employee record
+        data = {
+            'user_id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'is_manager': False,
+            'role': 'employee'  # Default role
+        }
+    
+    print("Returning user details:", data)
+    return Response(data)

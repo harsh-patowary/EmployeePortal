@@ -1,26 +1,45 @@
+from datetime import timezone
 from django.contrib.auth.models import User
 from django.db import models
 
-# class CustomUser(AbstractUser):
-#     is_admin = models.BooleanField(default=False)
-    
-#     groups = models.ManyToManyField(
-#         "auth.Group",
-#         related_name="customuser_set",
-#         blank=True
-#     )
-#     user_permissions = models.ManyToManyField(
-#         "auth.Permission",
-#         related_name="customuser_set",
-#         blank=True
-#     )
-
 class Employee(models.Model):
+    # Define role choices
+    ROLE_CHOICES = (
+        ('employee', 'Employee'),
+        ('manager', 'Manager'),
+        ('admin', 'Administrator'),
+        ('hr', 'HR Staff'),
+        ('director', 'Director'),
+    )
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    eID = models.CharField(max_length=255, unique=True)
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=15, unique=True)
+    DoB = models.DateField(null=True, blank=True)
     position = models.CharField(max_length=255)
+    # Keep the boolean field for backwards compatibility
+    is_manager = models.BooleanField(default=False)
+    # Add the new role field with choices
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default='employee',
+        help_text='The role defines what permissions the employee has in the system'
+    )
     department = models.CharField(max_length=255)
     salary = models.DecimalField(max_digits=10, decimal_places=2)
-    date_hired = models.DateField()
+    date_hired = models.DateField(null=True, blank=True)    
 
     def __str__(self):
         return self.user.username
+        
+    def save(self, *args, **kwargs):
+        # Sync is_manager with role for backwards compatibility
+        if self.role in ['manager', 'admin', 'director']:
+            self.is_manager = True
+        else:
+            self.is_manager = False
+        super().save(*args, **kwargs)

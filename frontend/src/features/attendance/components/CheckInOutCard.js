@@ -1,185 +1,240 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
-  Paper,
   Button,
-  Typography,
-  CircularProgress,
   Alert,
-  useTheme
-} from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import LoginIcon from '@mui/icons-material/Login';
-import LogoutIcon from '@mui/icons-material/Logout';
-import attendanceService from '../services/attendanceService';
+  CircularProgress,
+  Typography,
+  Chip,
+  Stack,
+} from "@mui/material";
+import LoginIcon from "@mui/icons-material/Login";
+import LogoutIcon from "@mui/icons-material/Logout";
+import attendanceService from "../services/attendanceService";
+import { format } from "date-fns";
 
 function CheckInOutCard({ employeeId, todayRecord, onAttendanceRecorded }) {
-  const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  
-  const currentTime = new Date();
-  const formattedTime = currentTime.toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit'
-  });
-  
+
+  // Debug log whenever todayRecord changes
+  useEffect(() => {
+    console.log("CheckInOutCard received todayRecord:", todayRecord);
+    console.log("CheckInOutCard received todayRecord:", todayRecord);
+    console.log("hasCheckedIn:", Boolean(todayRecord?.check_in));
+    console.log("hasCheckedOut:", Boolean(todayRecord?.check_out));
+    console.log(
+      "checkOutDisabled condition:",
+      !Boolean(todayRecord?.check_in) ||
+        Boolean(todayRecord?.check_out) ||
+        loading
+    );
+  }, [todayRecord]);
+
+  // Update the handleCheckIn function
   const handleCheckIn = async () => {
     try {
       setLoading(true);
       setError(null);
-      await attendanceService.checkIn(employeeId);
-      setSuccess('Check-in recorded successfully');
-      setLoading(false);
+      const response = await attendanceService.checkIn(employeeId);
+      setSuccess('Check-in recorded successfully!');
       
-      // Notify parent component to refresh data
-      if (onAttendanceRecorded) {
-        onAttendanceRecorded();
+      // If the API returns the updated record, use it immediately
+      if (response && response.record) {
+        // Immediately update the UI with the new record
+        if (onAttendanceRecorded) {
+          onAttendanceRecorded(response.record); // Pass the record from response
+        }
+      } else {
+        // Fall back to fetching all records
+        if (onAttendanceRecorded) {
+          onAttendanceRecorded();
+        }
       }
       
-      // Clear success message after 3 seconds
+      // Auto-hide success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError('Failed to record check-in');
-      setLoading(false);
+      setError('Failed to record check-in. Please try again.');
       console.error('Check-in error:', err);
+    } finally {
+      setLoading(false);
     }
   };
-  
+
+  // Update the handleCheckOut function
   const handleCheckOut = async () => {
     try {
       setLoading(true);
       setError(null);
-      await attendanceService.checkOut(employeeId);
-      setSuccess('Check-out recorded successfully');
-      setLoading(false);
+      const response = await attendanceService.checkOut(employeeId);
+      setSuccess('Check-out recorded successfully!');
       
-      // Notify parent component to refresh data
-      if (onAttendanceRecorded) {
-        onAttendanceRecorded();
+      // If the API returns the updated record, use it immediately
+      if (response && response.record) {
+        // Immediately update the UI with the new record
+        if (onAttendanceRecorded) {
+          onAttendanceRecorded(response.record); // Pass the record from response
+        }
+      } else {
+        // Fall back to fetching all records
+        if (onAttendanceRecorded) {
+          onAttendanceRecorded();
+        }
       }
       
-      // Clear success message after 3 seconds
+      // Auto-hide success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError('Failed to record check-out');
-      setLoading(false);
+      setError('Failed to record check-out. Please try again.');
       console.error('Check-out error:', err);
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Check if user has already checked in or out today
-  const hasCheckedIn = Boolean(todayRecord?.check_in);
-  const hasCheckedOut = Boolean(todayRecord?.check_out);
-  
+
+  // Status helpers - UPDATED logic for check-out button
+  // const hasCheckedIn = Boolean(todayRecord?.check_in);
+  // const hasCheckedOut = Boolean(todayRecord?.check_out);
+  // Update the hasCheckedIn and hasCheckedOut calculations
+  const hasCheckedIn =
+    todayRecord?.check_in &&
+    todayRecord.check_in !== "null" &&
+    todayRecord.check_in !== "";
+  const hasCheckedOut =
+    todayRecord?.check_out &&
+    todayRecord.check_out !== "null" &&
+    todayRecord.check_out !== "";
+
+  // Only disable check-out if there's no check-in record or already checked out
+  const checkOutDisabled = !hasCheckedIn || hasCheckedOut || loading;
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "present":
+        return "success";
+      case "absent":
+        return "error";
+      case "leave":
+        return "warning";
+      case "remote":
+        return "info";
+      case "half_day":
+        return "secondary";
+      default:
+        return "default";
+    }
+  };
+
+  // Format time for display
+  const formatTime = (timeStr) => {
+    if (!timeStr) return "—";
+    return timeStr.substring(0, 5); // Format as HH:MM
+  };
+
   return (
-    <Paper
-      elevation={1}
-      sx={{
-        p: 3,
-        borderRadius: theme.shape.borderRadius,
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-    >
-      <Typography variant="h6" gutterBottom>
-        Daily Attendance
-      </Typography>
-      
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          py: 3,
-          mb: 2
-        }}
-      >
-        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-          <CircularProgress
-            variant="determinate"
-            value={100}
-            size={100}
-            thickness={4}
-            sx={{ color: theme.palette.primary.main }}
-          />
-          <Box
-            sx={{
-              top: 0,
-              left: 0,
-              bottom: 0,
-              right: 0,
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Box sx={{ textAlign: 'center' }}>
-              <AccessTimeIcon color="primary" sx={{ mb: 0.5 }} />
-              <Typography variant="body2" color="text.secondary" component="div">
-                Current Time
-              </Typography>
-              <Typography variant="h6" component="div">
-                {formattedTime}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-      
+    <Box>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
-      
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {success}
         </Alert>
       )}
-      
-      <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+
+      <Box sx={{ mb: 3, display: "flex", flexDirection: "column", gap: 1 }}>
+        {todayRecord ? (
+          <Stack
+            direction="row"
+            spacing={2}
+            alignItems="center"
+            flexWrap="wrap"
+          >
+            <Box>
+              <Typography variant="body2" color="textSecondary">
+                Status:
+              </Typography>
+              <Chip
+                size="small"
+                label={
+                  todayRecord.status.charAt(0).toUpperCase() +
+                  todayRecord.status.slice(1)
+                }
+                color={getStatusColor(todayRecord.status)}
+                sx={{ mt: 0.5 }}
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="textSecondary">
+                Check-in:
+              </Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {formatTime(todayRecord.check_in) || "—"}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="textSecondary">
+                Check-out:
+              </Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {formatTime(todayRecord.check_out) || "—"}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="textSecondary">
+                Date:
+              </Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {todayRecord.date
+                  ? format(new Date(todayRecord.date), "dd MMM yyyy")
+                  : "—"}
+              </Typography>
+            </Box>
+          </Stack>
+        ) : (
+          <Typography variant="body2" color="textSecondary">
+            No attendance record for today. Use the buttons below to check in.
+          </Typography>
+        )}
+      </Box>
+
+      <Box sx={{ display: "flex", gap: 2 }}>
         <Button
           variant="contained"
-          color="primary"
           startIcon={<LoginIcon />}
           onClick={handleCheckIn}
           disabled={loading || hasCheckedIn}
-          fullWidth
+          sx={{ flex: 1 }}
         >
-          {loading ? 'Processing...' : 'Check In'}
+          {loading && !hasCheckedOut ? (
+            <CircularProgress size={24} />
+          ) : (
+            "Check In"
+          )}
         </Button>
-        
+
         <Button
           variant="outlined"
-          color="primary"
           startIcon={<LogoutIcon />}
           onClick={handleCheckOut}
-          disabled={loading || !hasCheckedIn || hasCheckedOut}
-          fullWidth
+          disabled={checkOutDisabled}
+          sx={{ flex: 1 }}
         >
-          {loading ? 'Processing...' : 'Check Out'}
+          {loading && hasCheckedIn ? (
+            <CircularProgress size={24} />
+          ) : (
+            "Check Out"
+          )}
         </Button>
       </Box>
-      
-      {hasCheckedIn && (
-        <Typography 
-          variant="body2" 
-          color="text.secondary"
-          align="center"
-          sx={{ mt: 2 }}
-        >
-          {hasCheckedOut ? 
-            'You have completed your attendance for today.' : 
-            'Don\'t forget to check out before leaving!'
-          }
-        </Typography>
-      )}
-    </Paper>
+    </Box>
   );
 }
 

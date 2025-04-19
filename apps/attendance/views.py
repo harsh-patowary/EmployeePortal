@@ -5,6 +5,7 @@ from datetime import date, datetime
 from .models import Attendance
 from .serializers import AttendanceSerializer, AttendanceCreateSerializer
 from apps.employees.models import Employee
+from .permissions import IsManagerOrReadOnly
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     """
@@ -12,7 +13,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     """
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsManagerOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['employee__first_name', 'employee__last_name', 'status']
     ordering_fields = ['date', 'employee__first_name']
@@ -92,6 +93,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def employee_history(self, request):
         """Get attendance history for a specific employee"""
         employee_id = request.query_params.get('employee_id')
+        print(f"Employee ID: {employee_id}")
         if not employee_id:
             return Response(
                 {'error': 'employee_id parameter is required'}, 

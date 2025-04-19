@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from 'react-redux';
+import { selectIsManager, selectRole } from '../../../redux/employeeSlice';
+import PermissionGate from '../../../components/PermissionGate';
 import {
   Box,
   Typography,
@@ -13,6 +16,7 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Alert
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
@@ -23,6 +27,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert"; // For mobile menu
 import FilterListIcon from "@mui/icons-material/FilterList";
 import AttendanceList from "../components/AttendanceList";
 import AttendanceForm from "../components/AttendanceForm";
+import attendanceService from '../services/attendanceService'; // Assuming this is where the service is located
 
 const AttendanceDashboard = () => {
   const theme = useTheme();
@@ -32,159 +37,17 @@ const AttendanceDashboard = () => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
   
-  const [attendanceData, setAttendanceData] = useState([
-    {
-      id: 1,
-      employee_name: 'John Doe',
-      employee_id: 1,
-      date: '2025-04-11',
-      status: 'present',
-      check_in: '09:00:00',
-      check_out: '17:00:00',
-      duration_hours: 8
-    },
-    {
-      id: 2,
-      employee_name: 'Jane Smith',
-      employee_id: 2,
-      date: '2025-04-11',
-      status: 'remote',
-      check_in: '08:30:00',
-      check_out: '16:30:00',
-      duration_hours: 8
-    },
-    // Additional dummy data
-    {
-      id: 3,
-      employee_name: 'Michael Johnson',
-      employee_id: 3,
-      date: '2025-04-11',
-      status: 'present',
-      check_in: '08:45:00',
-      check_out: '17:15:00',
-      duration_hours: 8.5
-    },
-    {
-      id: 4,
-      employee_name: 'Emily Williams',
-      employee_id: 4,
-      date: '2025-04-11',
-      status: 'absent',
-      check_in: null,
-      check_out: null,
-      duration_hours: 0
-    },
-    {
-      id: 5,
-      employee_name: 'David Brown',
-      employee_id: 5,
-      date: '2025-04-11',
-      status: 'leave',
-      check_in: null,
-      check_out: null,
-      duration_hours: 0
-    },
-    {
-      id: 6,
-      employee_name: 'Sarah Miller',
-      employee_id: 6,
-      date: '2025-04-11',
-      status: 'half_day',
-      check_in: '09:00:00',
-      check_out: '13:00:00',
-      duration_hours: 4
-    },
-    {
-      id: 7,
-      employee_name: 'Robert Wilson',
-      employee_id: 7,
-      date: '2025-04-11',
-      status: 'present',
-      check_in: '09:15:00',
-      check_out: '17:30:00',
-      duration_hours: 8.25
-    },
-    {
-      id: 8,
-      employee_name: 'Jennifer Taylor',
-      employee_id: 8,
-      date: '2025-04-11',
-      status: 'remote',
-      check_in: '08:00:00',
-      check_out: '16:00:00',
-      duration_hours: 8
-    },
-    {
-      id: 9,
-      employee_name: 'Thomas Anderson',
-      employee_id: 9,
-      date: '2025-04-11',
-      status: 'present',
-      check_in: '09:30:00',
-      check_out: '18:00:00',
-      duration_hours: 8.5
-    },
-    {
-      id: 10,
-      employee_name: 'Lisa Martinez',
-      employee_id: 10,
-      date: '2025-04-11',
-      status: 'remote',
-      check_in: '09:00:00',
-      check_out: '17:00:00',
-      duration_hours: 8
-    },
-    {
-      id: 11,
-      employee_name: 'Daniel Garcia',
-      employee_id: 11,
-      date: '2025-04-11',
-      status: 'leave',
-      check_in: null,
-      check_out: null,
-      duration_hours: 0
-    },
-    {
-      id: 12,
-      employee_name: 'Patricia Rodriguez',
-      employee_id: 12,
-      date: '2025-04-11',
-      status: 'present',
-      check_in: '08:45:00',
-      check_out: '17:15:00',
-      duration_hours: 8.5
-    },
-    {
-      id: 13,
-      employee_name: 'Andrew Wilson',
-      employee_id: 13,
-      date: '2025-04-11',
-      status: 'absent',
-      check_in: null,
-      check_out: null,
-      duration_hours: 0
-    },
-    {
-      id: 14,
-      employee_name: 'Elizabeth Clark',
-      employee_id: 14,
-      date: '2025-04-11',
-      status: 'present',
-      check_in: '09:00:00',
-      check_out: '17:00:00',
-      duration_hours: 8
-    },
-    {
-      id: 15,
-      employee_name: 'Kevin Lewis',
-      employee_id: 15,
-      date: '2025-04-11',
-      status: 'half_day',
-      check_in: '09:00:00',
-      check_out: '13:30:00',
-      duration_hours: 4.5
-    }
-  ]);
+  // Get role information
+  const isManager = useSelector(selectIsManager);
+  const userRole = useSelector(selectRole);
+  
+  // Debug logging
+  console.log('AttendanceDashboard rendering with roles:', {
+    isManager,
+    userRole
+  });
+  
+  const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -197,6 +60,33 @@ const AttendanceDashboard = () => {
     attendanceRate: 86,
   };
 
+  // Add useEffect to fetch data
+  useEffect(() => {
+    const fetchAttendanceData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await attendanceService.getAttendanceRecords();
+        console.log('Fetched attendance data:', response);
+        
+        // Handle different response formats
+        if (response && (response.results || Array.isArray(response))) {
+          setAttendanceData(response.results || response);
+        }
+        
+        // Update summary based on today's data
+        // You'll need to implement this based on your data structure
+      } catch (err) {
+        console.error('Error fetching attendance data:', err);
+        setError('Failed to load attendance data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAttendanceData();
+  }, []);
+
   // Handle mobile menu
   const handleOpenMobileMenu = (event) => {
     setMobileMenuAnchor(event.currentTarget);
@@ -207,6 +97,12 @@ const AttendanceDashboard = () => {
   };
 
   const handleOpenAttendanceForm = (record = null) => {
+    // Only managers can edit existing records
+    if (record && !isManager) {
+      // Show error or notification that user doesn't have permission
+      return;
+    }
+    
     setSelectedRecord(record);
     setOpenAttendanceForm(true);
     handleCloseMobileMenu();
@@ -294,7 +190,7 @@ const AttendanceDashboard = () => {
     const otherElementsHeight = isMobile ? 320 : 240;
     return Math.max(400, viewportHeight - otherElementsHeight);
   };
-
+   console.log('Rendering AttendanceDashboard:', { attendanceData, loading, error });
   return (
     <Box 
       sx={{ 
@@ -304,6 +200,14 @@ const AttendanceDashboard = () => {
         minHeight: '100%', // Changed from height: '100%'
       }}
     >
+      {/* Debug Panel */}
+      <Paper sx={{ p: 2, mb: 2, bgcolor: '#f5f5f5' }}>
+        <Typography variant="h6">Dashboard Debug Info</Typography>
+        <Alert severity={isManager ? "success" : "error"}>
+          isManager: {String(isManager)}, Role: {userRole || 'undefined'}
+        </Alert>
+      </Paper>
+      
       {/* Header section */}
       <Box sx={{ mb: { xs: 2, sm: 3 } }}>
         <Box
@@ -323,65 +227,67 @@ const AttendanceDashboard = () => {
             Attendance Management
           </Typography>
           
-          {/* Mobile hamburger menu */}
-          {isMobile ? (
-            <>
-              <Box sx={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<FilterListIcon />}
-                  size="small"
-                  sx={{ flex: 1, mr: 1 }}
-                >
-                  Filter
-                </Button>
-                
-                <Button
-                  variant="contained" 
-                  startIcon={<AddIcon />}
-                  onClick={() => handleOpenAttendanceForm()}
-                  sx={{ flex: 1 }}
-                  size="small"
-                >
-                  Add
-                </Button>
-                
-                <IconButton 
-                  onClick={handleOpenMobileMenu}
-                  sx={{ ml: 1 }}
-                >
-                  <MoreVertIcon />
-                </IconButton>
-                
-                <Menu
-                  anchorEl={mobileMenuAnchor}
-                  open={Boolean(mobileMenuAnchor)}
-                  onClose={handleCloseMobileMenu}
-                  PaperProps={{
-                    elevation: 3,
-                    sx: { width: 200 }
-                  }}
-                >
-                  <MenuItem onClick={() => handleOpenAttendanceForm()}>
-                    <AddIcon fontSize="small" sx={{ mr: 1 }} />
-                    Add Record
-                  </MenuItem>
-                  <MenuItem onClick={handleCloseMobileMenu}>
-                    <FilterListIcon fontSize="small" sx={{ mr: 1 }} />
-                    Advanced Filter
-                  </MenuItem>
-                </Menu>
-              </Box>
-            </>
-          ) : (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenAttendanceForm()}
-            >
-              Add Record
-            </Button>
-          )}
+          {/* Add New Record button - Only show for managers */}
+          <PermissionGate requiredRole="manager">
+            {isMobile ? (
+              <>
+                <Box sx={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FilterListIcon />}
+                    size="small"
+                    sx={{ flex: 1, mr: 1 }}
+                  >
+                    Filter
+                  </Button>
+                  
+                  <Button
+                    variant="contained" 
+                    startIcon={<AddIcon />}
+                    onClick={() => handleOpenAttendanceForm()}
+                    sx={{ flex: 1 }}
+                    size="small"
+                  >
+                    Add
+                  </Button>
+                  
+                  <IconButton 
+                    onClick={handleOpenMobileMenu}
+                    sx={{ ml: 1 }}
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
+                  
+                  <Menu
+                    anchorEl={mobileMenuAnchor}
+                    open={Boolean(mobileMenuAnchor)}
+                    onClose={handleCloseMobileMenu}
+                    PaperProps={{
+                      elevation: 3,
+                      sx: { width: 200 }
+                    }}
+                  >
+                    <MenuItem onClick={() => handleOpenAttendanceForm()}>
+                      <AddIcon fontSize="small" sx={{ mr: 1 }} />
+                      Add Record
+                    </MenuItem>
+                    <MenuItem onClick={handleCloseMobileMenu}>
+                      <FilterListIcon fontSize="small" sx={{ mr: 1 }} />
+                      Advanced Filter
+                    </MenuItem>
+                  </Menu>
+                </Box>
+              </>
+            ) : (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenAttendanceForm()}
+              >
+                Add Record
+              </Button>
+            )}
+          </PermissionGate>
         </Box>
       </Box>
       
@@ -459,7 +365,7 @@ const AttendanceDashboard = () => {
             attendanceData={attendanceData}
             loading={loading}
             error={error}
-            onEdit={handleOpenAttendanceForm}
+            onEdit={isManager ? handleOpenAttendanceForm : undefined}
             isMobile={isMobile}
           />
         </Box>

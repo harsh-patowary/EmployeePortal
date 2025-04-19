@@ -1,6 +1,7 @@
 import React from 'react';
 import { Typography, Box, Paper, Grid, useTheme } from '@mui/material';
-// import other components as needed
+import UserDetailsComponent from '../components/UserComponent';
+import UserRoleDebug from '../components/UserRoleDebug';
 
 function DashboardPage() {
   const theme = useTheme(); // Access theme in your component
@@ -9,6 +10,13 @@ function DashboardPage() {
     <Box>
       <Typography variant="h4" component="h1" gutterBottom>
         Dashboard
+      </Typography>
+      
+      {/* Debug component - remove in production */}
+      <UserRoleDebug />
+      
+      <Typography paragraph>
+        Welcome to the Employee Management System dashboard. Use the navigation menu to access different features.
       </Typography>
       
       <Grid container spacing={3}>
@@ -25,10 +33,8 @@ function DashboardPage() {
                 : theme.palette.primary.contrastText
             }}
           >
-            <Typography variant="h6">
-              Statistics
-            </Typography>
-            {/* Dashboard content */}
+            <UserDetailsComponent />
+            
           </Paper>
         </Grid>
         {/* More grid items */}

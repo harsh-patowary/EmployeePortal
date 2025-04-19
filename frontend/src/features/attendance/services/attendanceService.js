@@ -2,13 +2,15 @@ import axios from 'axios';
 import { mockAttendanceData } from '../mock/mockData';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+console.log('API URL:', process.env.REACT_APP_API_URL || 'http://localhost:8000/api');
+// Set this to false to use the real backend API
+const USE_MOCK_DATA = false;
 
-// Flag to use mock data for testing
-const USE_MOCK_DATA = true;
-
+const DEBUG = true;
 // Helper function to get auth token from localStorage
 const getAuthHeader = () => {
   const token = localStorage.getItem('token');
+  if (DEBUG) console.log('Auth token available:', Boolean(token));
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
@@ -26,10 +28,12 @@ const attendanceService = {
     
     try {
       const params = { page, ...filters };
+      console.log('Fetching attendance records from:', `${API_URL}/attendance/`);
       const response = await axios.get(`${API_URL}/attendance/`, {
         headers: getAuthHeader(),
         params
       });
+      console.log('Attendance records response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching attendance records:', error);
@@ -56,6 +60,7 @@ const attendanceService = {
         headers: getAuthHeader(),
         params: { employee_id: employeeId }
       });
+      console.log('Employee attendance response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching employee attendance:', error);
@@ -65,11 +70,6 @@ const attendanceService = {
   
   // Record check-in
   checkIn: async (employeeId) => {
-    if (USE_MOCK_DATA) {
-      console.log('Mock check-in recorded for employee:', employeeId);
-      return { success: true };
-    }
-    
     try {
       const response = await axios.post(
         `${API_URL}/attendance/check_in/`, 
@@ -100,15 +100,6 @@ const attendanceService = {
   
   // Create manual attendance record
   createAttendanceRecord: async (attendanceData) => {
-    if (USE_MOCK_DATA) {
-      console.log('Mock attendance record created:', attendanceData);
-      return { 
-        id: Math.floor(Math.random() * 1000), 
-        ...attendanceData,
-        employee_name: "John Doe"  // Mock name
-      };
-    }
-    
     try {
       const response = await axios.post(
         `${API_URL}/attendance/`, 

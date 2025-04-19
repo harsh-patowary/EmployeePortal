@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { selectUser } from '../../../redux/authSlice';
 import { 
   Typography, 
   Box, 
@@ -7,83 +8,70 @@ import {
   Grid, 
   CircularProgress,
   Alert,
-  Button,
+  Card,
+  CardContent,
   Tab,
   Tabs
 } from '@mui/material';
 import AttendanceCalendar from '../components/AttendanceCalendar';
-import AttendanceForm from '../components/AttendanceForm';
-import attendanceService from '../services/attendanceService';
+import CheckInOutCard from '../components/CheckInOutCard';
+import AttendanceList from '../components/AttendanceList';
+import useAttendance from '../hooks/useAttendance';
 
 function EmployeeAttendancePage() {
-  const { employeeId } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [employee, setEmployee] = useState(null);
-  const [attendanceRecords, setAttendanceRecords] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const user = useSelector(selectUser);
   const [activeTab, setActiveTab] = useState(0);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // You'll need to create this endpoint in your employeeService
-        // const employeeResponse = await employeeService.getEmployeeById(employeeId);
-        // setEmployee(employeeResponse);
-        
-        // Temporarily mock the employee data
-        setEmployee({
-          id: employeeId,
-          first_name: 'John',
-          last_name: 'Doe',
-          email: 'john.doe@example.com',
-          department: 'Engineering'
-        });
-        
-        const attendanceResponse = await attendanceService.getEmployeeAttendance(employeeId);
-        setAttendanceRecords(attendanceResponse.results || attendanceResponse);
-        
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load employee attendance data');
-        setLoading(false);
-        console.error(err);
-      }
-    };
-    
-    fetchData();
-  }, [employeeId]);
-
+  
+  // Use the useAttendance hook with auto-refresh enabled
+  // This will automatically poll for updates every 15 seconds
+  const { 
+    attendanceData: attendanceRecords, 
+    loading, 
+    error, 
+    refetch: refreshAttendance 
+  } = useAttendance(user?.id, { autoRefresh: true, refreshInterval: 15000 });
+  
+  // Find today's record using the hard-coded date
+  const targetDate = '2025-04-19'; // Hard-code the expected date format
+  const todayRecord = attendanceRecords.find(record => record.date === targetDate);
+  
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
-
-  const handleCreateRecord = () => {
-    setShowForm(true);
-  };
-
-  const handleCancelForm = () => {
-    setShowForm(false);
-  };
-
-  const handleSubmitForm = async (formData) => {
-    try {
-      const data = { ...formData, employee: employeeId };
-      await attendanceService.createAttendanceRecord(data);
+  
+  // Update the handleAttendanceRecorded function
+  const handleAttendanceRecorded = async (updatedRecord) => {
+    if (updatedRecord) {
+      // Immediately update the UI without waiting for refresh
+      console.log('Updating UI with record:', updatedRecord);
       
-      // Refresh the attendance records
-      const attendanceResponse = await attendanceService.getEmployeeAttendance(employeeId);
-      setAttendanceRecords(attendanceResponse.results || attendanceResponse);
+      // Create a new array with the updated record
+      const updatedRecords = [...attendanceRecords];
       
-      setShowForm(false);
-    } catch (err) {
-      console.error('Failed to save attendance record:', err);
-      setError('Failed to save attendance record');
+      // Find and update the record if it exists
+      const existingIndex = updatedRecords.findIndex(r => r.id === updatedRecord.id);
+      
+      if (existingIndex >= 0) {
+        // Replace the existing record
+        updatedRecords[existingIndex] = updatedRecord;
+      } else {
+        // Add the new record
+        updatedRecords.push(updatedRecord);
+      }
+      
+      // No need to call setAttendanceRecords as it's managed by the hook
+      // But we can update todayRecord immediately
+      if (updatedRecord.date === targetDate) {
+        // Force the component to re-render with the updated record
+        todayRecord(updatedRecord);
+      }
+    } else {
+      // Fall back to standard refresh if no record is provided
+      await refreshAttendance();
     }
   };
 
-  if (loading) {
+  if (loading && attendanceRecords.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="400px">
         <CircularProgress />
@@ -101,60 +89,99 @@ function EmployeeAttendancePage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" gutterBottom>
-          Attendance for {employee?.first_name} {employee?.last_name}
-        </Typography>
-        
-        <Button 
-          variant="contained" 
-          color="primary"
-          onClick={handleCreateRecord}
-        >
-          Add Attendance Record
-        </Button>
-      </Box>
+      <Typography variant="h4" gutterBottom>
+        My Attendance
+      </Typography>
       
-      {showForm ? (
-        <AttendanceForm 
-          onSubmit={handleSubmitForm} 
-          onCancel={handleCancelForm}
-          employees={[employee]} // Pass the employee as the only option
-          initialData={{ employee: employeeId }} // Pre-select the employee
-        />
-      ) : (
-        <Paper sx={{ borderRadius: 2, mb: 3 }}>
-          <Tabs 
-            value={activeTab} 
-            onChange={handleTabChange}
-            sx={{ borderBottom: 1, borderColor: 'divider' }}
-          >
-            <Tab label="Calendar View" />
-            <Tab label="List View" />
-            <Tab label="Statistics" />
-          </Tabs>
+      {/* Check In/Out Card */}
+      <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Today's Attendance
+        </Typography>
+        <Box sx={{ mt: 2 }}>
+          <CheckInOutCard 
+            employeeId={user?.id}
+            todayRecord={todayRecord}
+            onAttendanceRecorded={handleAttendanceRecorded}
+            // Force re-render by adding key with todayRecord state
+            key={todayRecord ? 
+              `${todayRecord.id}-${todayRecord.check_in}-${todayRecord.check_out}` 
+              : 'no-record'}
+          />
+        </Box>
+      </Paper>
+      
+      {/* Attendance History Tabs */}
+      <Paper sx={{ borderRadius: 2 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Calendar View" />
+          <Tab label="List View" />
+          <Tab label="Summary" />
+        </Tabs>
+        
+        <Box p={3}>
+          {activeTab === 0 && (
+            <AttendanceCalendar 
+              attendanceData={attendanceRecords}
+            />
+          )}
           
-          <Box p={3}>
-            {activeTab === 0 && (
-              <AttendanceCalendar 
-                attendanceData={attendanceRecords}
-              />
-            )}
-            
-            {activeTab === 1 && (
-              <Typography>
-                List view of attendance records will be displayed here
-              </Typography>
-            )}
-            
-            {activeTab === 2 && (
-              <Typography>
-                Attendance statistics will be displayed here
-              </Typography>
-            )}
-          </Box>
-        </Paper>
-      )}
+          {activeTab === 1 && (
+            <AttendanceList
+              attendanceData={attendanceRecords}
+              loading={loading}
+              error={error}
+              personalView={true}
+              isMobile={false}
+            />
+          )}
+          
+          {activeTab === 2 && (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={4}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Present Days
+                    </Typography>
+                    <Typography variant="h5">
+                      {attendanceRecords.filter(record => record.status === 'present').length}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Absent Days
+                    </Typography>
+                    <Typography variant="h5">
+                      {attendanceRecords.filter(record => record.status === 'absent').length}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Leave Days
+                    </Typography>
+                    <Typography variant="h5">
+                      {attendanceRecords.filter(record => record.status === 'leave').length}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          )}
+        </Box>
+      </Paper>
     </Box>
   );
 }

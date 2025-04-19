@@ -16,27 +16,48 @@ import {
   useTheme
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { fetchEmployeeData } from '../redux/employeeSlice';
 
 function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const theme = useTheme();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const data = await loginUser(username, password);
-      dispatch(loginSuccess({ 
-        user: { username },
-        access: data.access 
-      }));
+      // Make the API call to login
+      const response = await loginUser(username, password);
+      console.log('Login successful:', response);
+      
+      // Store token in localStorage
+      localStorage.setItem('token', response.access);
+      
+      // Dispatch login success action to Redux (basic auth)
+      dispatch(loginSuccess(response));
+      
+      // Fetch detailed employee data to determine roles
+      try {
+        await dispatch(fetchEmployeeData()).unwrap();
+      } catch (empError) {
+        console.error('Failed to fetch employee details:', empError);
+        // Continue with login anyway, roles will be limited
+      }
+      
+      // Redirect to dashboard
       navigate('/dashboard');
-    } catch (error) {
-      setError('Login failed. Please check your credentials.');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Invalid username or password. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -112,8 +133,9 @@ function LoginPage() {
                 fontWeight: 500,
                 fontSize: '1rem'
               }}
+              disabled={isLoading}
             >
-              Sign In
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
           </Box>
         </Box>

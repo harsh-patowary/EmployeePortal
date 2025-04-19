@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { selectUser } from '../../../redux/authSlice';
 import {
   Box,
   Button,
@@ -18,6 +20,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { format } from 'date-fns';
+import axios from 'axios';
+import { API_URL, getAuthHeader } from '../../../utils/api';
 
 const ATTENDANCE_STATUSES = [
   { value: 'present', label: 'Present' },
@@ -28,6 +32,9 @@ const ATTENDANCE_STATUSES = [
 ];
 
 function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
+  const user = useSelector(selectUser);
+  const isManager = user?.is_manager === true;
+
   const [formData, setFormData] = useState({
     employee: '',
     date: new Date(),
@@ -38,12 +45,8 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
   });
   
   const [errors, setErrors] = useState({});
-
-  // Mock employees data - replace with actual data in production
-  const employees = [
-    { id: 1, first_name: 'John', last_name: 'Doe' },
-    { id: 2, first_name: 'Jane', last_name: 'Smith' },
-  ];
+  const [employees, setEmployees] = useState([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
 
   // If editing existing record, populate form with initial data
   useEffect(() => {
@@ -66,6 +69,45 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
       });
     }
   }, [attendanceRecord, open]);
+
+  // Conditionally load employees based on role
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      setLoadingEmployees(true);
+      try {
+        if (isManager) {
+          // Managers can select any employee
+          const response = await axios.get(`${API_URL}/employees/employees/`, {
+            headers: getAuthHeader()
+          });
+          setEmployees(response.data);
+        } else {
+          // Non-managers can only select themselves
+          setEmployees([
+            {
+              id: user.id,
+              first_name: user.first_name,
+              last_name: user.last_name
+            }
+          ]);
+          
+          // Automatically set the employee field to the current user
+          setFormData(prev => ({
+            ...prev,
+            employee: user.id
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch employees", err);
+      } finally {
+        setLoadingEmployees(false);
+      }
+    };
+
+    if (open) {
+      fetchEmployees();
+    }
+  }, [open, isManager, user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -147,6 +189,9 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
     onSave(formattedData);
   };
 
+  // Disable employee field for non-managers
+  const employeeFieldDisabled = !isManager || loadingEmployees;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -158,7 +203,7 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
           <Box component="form" noValidate sx={{ mt: 2 }}>
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth error={!!errors.employee}>
+                <FormControl fullWidth error={!!errors.employee} disabled={employeeFieldDisabled}>
                   <InputLabel id="employee-select-label">Employee</InputLabel>
                   <Select
                     labelId="employee-select-label"
@@ -168,11 +213,15 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
                     onChange={handleChange}
                     label="Employee"
                   >
-                    {employees.map(employee => (
-                      <MenuItem key={employee.id} value={employee.id}>
-                        {employee.first_name} {employee.last_name}
-                      </MenuItem>
-                    ))}
+                    {loadingEmployees ? (
+                      <MenuItem disabled>Loading employees...</MenuItem>
+                    ) : (
+                      employees.map(employee => (
+                        <MenuItem key={employee.id} value={employee.id}>
+                          {employee.first_name} {employee.last_name}
+                        </MenuItem>
+                      ))
+                    )}
                   </Select>
                   {errors.employee && <FormHelperText>{errors.employee}</FormHelperText>}
                 </FormControl>

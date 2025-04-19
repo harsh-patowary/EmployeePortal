@@ -126,3 +126,4 @@ export function ThemeProviderWrapper({ children }) {
     </ColorModeContext.Provider>
   );
 }
+export default ThemeProviderWrapper;
