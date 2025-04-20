@@ -19,6 +19,10 @@ superuser: root | toor
 site login: rk12345 admin@123
 Manager: Username=jb19370, Password=manager123
 Employee: Username=lt45807, Password=employee123
+
+
+temp_access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ1MTE5NzU5LCJpYXQiOjE3NDUxMTk0NTksImp0aSI6ImY5YzBhNTA5MmVlMTQwZmFiZWVjNmY3YTYzZTg0ZjQxIiwidXNlcl9pZCI6N30.Hd6XPRp4juKdbxAB5sgFw4Uoc63EfL0d8CUuhx4kQZU
+
 Created employee: Linda Thomas - Username: lt45807 - ID: ZLEB2FJ
   Created employee: Daniel Johnson - Username: dj84772 - ID: MMQQ1IS
   Created employee: Susan Thomas - Username: st42916 - ID: 6G9GYVH

@@ -21,24 +21,16 @@ export const fetchUserDetails = createAsyncThunk(
 export const fetchManagerTeam = createAsyncThunk(
   'employee/fetchManagerTeam',
   async (_, { rejectWithValue, getState }) => {
-    // Only fetch if the user is a manager
-    const user = getState().employee.user; // Get user state safely
-    // Check if user exists before accessing properties
-    if (!user || (!user.is_manager && !['manager', 'admin', 'hr', 'director'].includes(user.role))) {
-        console.log("Skipping fetchManagerTeam: User is not a manager or user data not loaded.");
-        return []; // Don't fetch for non-managers or if user isn't loaded
-    }
+    console.log(">>> fetchManagerTeam THUNK: Started execution.");
+    
     try {
+      console.log(">>> fetchManagerTeam THUNK: Calling getManagerTeam() service...");
       const data = await getManagerTeam();
-      console.log("Fetched manager team:", data);
-      return data; // Should be the array of team members
+      console.log(">>> fetchManagerTeam THUNK: getManagerTeam() service returned:", data);
+      return data;
     } catch (error) {
-      // Handle specific errors like 403
-      if (error.response?.status === 403) {
-          console.warn("fetchManagerTeam rejected with 403: User likely lacks permissions.");
-          return rejectWithValue("Permission denied");
-      }
-      return rejectWithValue(error.message);
+      console.error(">>> fetchManagerTeam THUNK: Error during getManagerTeam() call:", error);
+      return rejectWithValue(error.message || "Failed to fetch team members");
     }
   }
 );
@@ -136,10 +128,37 @@ const employeeSlice = createSlice({
       state.isAuthenticated = false;
       state.teamMembers = []; // Clear team on logout
       state.allEmployees = []; // Clear all employees on logout
+
+      // Reset loading and error states for data fetched based on role
+      state.loadingTeam = 'idle'; // <-- ADD THIS
+      state.errorTeam = null;     // <-- ADD THIS (Good practice)
+      state.loadingAllEmployees = 'idle'; // <-- ADD THIS
+      state.errorAllEmployees = null; // <-- ADD THIS (Good practice)
+      state.loading = 'idle'; // Reset general loading state too if applicable
+      state.error = null;     // Reset general error state too if applicable
+
+
       // Clear tokens from localStorage here
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user'); // Ensure user is cleared
+    },
+    // You might want to consolidate logout logic into one action or ensure both are complete
+    logoutUser: (state) => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.teamMembers = [];
+        state.allEmployees = [];
+        state.loadingTeam = 'idle';
+        state.errorTeam = null;
+        state.loadingAllEmployees = 'idle';
+        state.errorAllEmployees = null;
+        state.loading = 'idle';
+        state.error = null;
+        // Also clear localStorage here if this action is used
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
     },
   },
   extraReducers: (builder) => {
@@ -169,15 +188,21 @@ const employeeSlice = createSlice({
       // Manager Team
       .addCase(fetchManagerTeam.pending, (state) => {
         state.loadingTeam = 'pending';
+        state.errorTeam = null;
+        console.log("Redux: fetchManagerTeam pending"); // Add log
       })
       .addCase(fetchManagerTeam.fulfilled, (state, action) => {
         state.loadingTeam = 'succeeded';
-        state.teamMembers = action.payload; // Store the array
+        // *** THIS IS THE FIX: Assign the fetched data to state.teamMembers ***
+        state.teamMembers = action.payload || []; // Use payload, default to empty array
         state.errorTeam = null;
+        console.log("Redux: fetchManagerTeam fulfilled, payload:", action.payload); // Add log
       })
       .addCase(fetchManagerTeam.rejected, (state, action) => {
         state.loadingTeam = 'failed';
-        state.errorTeam = action.payload;
+        state.errorTeam = action.payload || action.error.message;
+        state.teamMembers = []; // Clear team members on failure
+        console.error("Redux: fetchManagerTeam rejected:", action.payload || action.error.message); // Add log
       })
       // All Employees
       .addCase(fetchAllEmployees.pending, (state) => {
@@ -204,7 +229,8 @@ export const {
   setLoading,
   setError,
   clearEmployee,
-  logout
+  logout,
+  logoutUser
 } = employeeSlice.actions;
 
 // Selectors

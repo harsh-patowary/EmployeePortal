@@ -69,54 +69,46 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
 
   // Effect to load the correct employee list for the dropdown
   useEffect(() => {
-    // Only run if the dialog is open and user data is available
     if (open && user) {
-        setLoadingEmployees(true); // Indicate loading starts
+        setLoadingEmployees(true); 
+        console.log("AttendanceForm Employee Load Effect Triggered. User Role:", userRole, "Is Manager:", isManager); // Add log
 
-        // Determine which list to show based on role
         let employeeListToShow = [];
         let isLoading = false;
 
-        if (['admin', 'hr', 'director'].includes(userRole)) {
-            // Admin/HR/Director see all employees
-            employeeListToShow = allEmployees;
-            isLoading = loadingAllEmployees === 'pending';
-            // If data isn't loaded yet, dispatch fetch
-            if (allEmployees.length === 0 && loadingAllEmployees === 'idle') {
-                dispatch(fetchAllEmployees());
-            }
-        } else if (isManager) {
-            // Manager sees their team
-            employeeListToShow = teamMembers;
+        if (isManager && !['admin', 'hr', 'director'].includes(userRole)) {
+            console.log("AttendanceForm: Using Team Members. Current teamMembers:", teamMembers); // Add log
+            employeeListToShow = teamMembers || []; // Ensure it's an array
             isLoading = loadingTeam === 'pending';
-             // If data isn't loaded yet, dispatch fetch
-            if (teamMembers.length === 0 && loadingTeam === 'idle') {
+            if ((!teamMembers || teamMembers.length === 0) && loadingTeam === 'idle') {
+                console.log("AttendanceForm: Dispatching fetchManagerTeam");
                 dispatch(fetchManagerTeam());
             }
+        } else if (['admin', 'hr', 'director'].includes(userRole)) {
+            console.log("AttendanceForm: Using All Employees. Current allEmployees:", allEmployees); // Add log
+            employeeListToShow = allEmployees || []; // Ensure it's an array
+            isLoading = loadingAllEmployees === 'pending';
+            if ((!allEmployees || allEmployees.length === 0) && loadingAllEmployees === 'idle') {
+                console.log("AttendanceForm: Dispatching fetchAllEmployees");
+                dispatch(fetchAllEmployees());
+            }
         } else {
-            // Regular employee only sees themselves
-            employeeListToShow = [{
-                id: user.id,
-                first_name: user.first_name,
-                last_name: user.last_name,
-            }];
-            isLoading = false; // No fetching needed
+            console.log("AttendanceForm: Using Self (Regular Employee). User:", user); // Add log
+            employeeListToShow = user ? [{ id: user.id, first_name: user.first_name, last_name: user.last_name }] : [];
+            isLoading = false; 
         }
 
-        console.log("Setting employees for dropdown:", employeeListToShow);
+        console.log("AttendanceForm: Setting employees for dropdown:", employeeListToShow); // Add log
         setEmployees(employeeListToShow);
         setLoadingEmployees(isLoading);
 
-        // If user is not a manager, ensure their ID is set
-        if (!isManager && user) {
-             setFormData(prev => ({
-                ...prev,
-                employee: user.id
-             }));
-        }
+        // ... rest of effect ...
+    } else if (!open) {
+        // Clear list when dialog closes to avoid stale data
+        setEmployees([]);
+        setLoadingEmployees(false);
     }
-  }, [open, user, isManager, userRole, teamMembers, allEmployees, loadingTeam, loadingAllEmployees, dispatch]); // Add dependencies
-
+  }, [open, user, isManager, userRole, teamMembers, allEmployees, loadingTeam, loadingAllEmployees, dispatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -188,7 +180,7 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
                   value={formData.employee}
                   label="Employee"
                   onChange={handleChange}
-                  disabled={!isManager || loadingEmployees} // Disable for non-managers or while loading
+                  disabled={!['manager', 'admin', 'hr', 'director'].includes(userRole) || loadingEmployees} // Disable for non-managers or while loading
                 >
                   {loadingEmployees && <MenuItem value=""><CircularProgress size={20} sx={{ ml: 1 }} /> Loading...</MenuItem>}
                   {!loadingEmployees && employees.length === 0 && <MenuItem value="" disabled>No employees found</MenuItem>}
@@ -209,7 +201,13 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
                  label="Date"
                  value={formData.date}
                  onChange={(newValue) => handleDateChange('date', newValue)}
-                 renderInput={(params) => <TextField {...params} fullWidth error={!!errors.date} helperText={errors.date} />}
+                 slotProps={{
+                   textField: {
+                     fullWidth: true,
+                     error: !!errors.date,
+                     helperText: errors.date,
+                   }
+                 }}
                  inputFormat="yyyy-MM-dd" // Just date, no time needed here
                  mask="____-__-__"
                />
@@ -219,7 +217,13 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
                  label="Check-in Time"
                  value={formData.check_in}
                  onChange={(newValue) => handleDateChange('check_in', newValue)}
-                 renderInput={(params) => <TextField {...params} fullWidth error={!!errors.check_in} helperText={errors.check_in} />}
+                 slotProps={{
+                   textField: {
+                     fullWidth: true,
+                     error: !!errors.check_in,
+                     helperText: errors.check_in,
+                   }
+                 }}
                />
              </Grid>
              <Grid item xs={12} sm={6}>
@@ -227,7 +231,13 @@ function AttendanceForm({ open, onClose, attendanceRecord, onSave }) {
                  label="Check-out Time"
                  value={formData.check_out}
                  onChange={(newValue) => handleDateChange('check_out', newValue)}
-                 renderInput={(params) => <TextField {...params} fullWidth error={!!errors.check_out} helperText={errors.check_out} />}
+                 slotProps={{
+                   textField: {
+                     fullWidth: true,
+                     error: !!errors.check_out,
+                     helperText: errors.check_out,
+                   }
+                 }}
                  minDateTime={formData.check_in || undefined} // Ensure check-out is after check-in
                />
              </Grid>

@@ -49,25 +49,41 @@ export const getAllEmployees = async () => {
 
 export const getManagerTeam = async () => {
   try {
-    // Use the api utility which handles auth automatically
-    const response = await api.get('/employees/manager-team/'); 
-    // The backend returns an object: { manager: {...}, team_size: X, team_members: [...] }
-    // We only need the team_members array for the dropdown
+    console.log(">>> getManagerTeam Service: Attempting API call..."); // Log start
+    const response = await api.get('/employees/manager-team/');
+    
+    // *** ADD DETAILED LOGGING HERE ***
+    console.log(">>> getManagerTeam Service: Raw API Response:", response); 
+    console.log(">>> getManagerTeam Service: Raw Response Data:", response.data); 
+
+    // Check the structure you received from Postman again carefully
     if (response.data && Array.isArray(response.data.team_members)) {
-      console.log("Fetched manager team:", response.data.team_members);
-      return response.data.team_members; 
+      console.log(">>> getManagerTeam Service: Success - Returning team_members array.");
+      return response.data.team_members;
     } else {
-      console.error("Unexpected response structure for manager team:", response.data);
-      return []; // Return empty array if structure is wrong
+      // *** Log the failure reason ***
+      console.error(">>> getManagerTeam Service: ERROR - Unexpected response structure. Data received:", response.data);
+      // Consider throwing an error here instead of returning empty to make the failure clearer
+      throw new Error("Unexpected response structure received from /manager-team/"); 
+      // return []; // Returning empty might hide the real issue
     }
   } catch (error) {
-    console.error('Error fetching manager team:', error.response?.data || error.message);
+    // *** Log the caught error ***
+    console.error('>>> getManagerTeam Service: CATCH BLOCK - Error fetching manager team:', error); 
+    // Log specific parts if available
+    if (error.response) {
+        console.error('>>> getManagerTeam Service: CATCH BLOCK - Error Response Status:', error.response.status);
+        console.error('>>> getManagerTeam Service: CATCH BLOCK - Error Response Data:', error.response.data);
+    } else {
+        console.error('>>> getManagerTeam Service: CATCH BLOCK - Error Message:', error.message);
+    }
+
     // Handle specific errors like 403 Forbidden if the user isn't a manager
     if (error.response?.status === 403) {
-      console.warn("User does not have manager permissions to fetch team.");
+      console.warn(">>> getManagerTeam Service: User does not have manager permissions (403). Returning empty array.");
       return []; // Return empty array for non-managers
     }
-    throw error; // Re-throw other errors
+    throw error; // Re-throw other errors so the thunk catches them
   }
 };
 

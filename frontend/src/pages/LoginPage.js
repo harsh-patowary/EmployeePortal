@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
+import companyLogo from '../assets/logos/company-logo.svg';
 import { loginUser } from '../services/authService'; // Assuming authService handles login API call
 import { selectIsAuthenticated, selectError, fetchUserDetails } from '../redux/employeeSlice'; 
 import {
-  Container, Box, TextField, Button, Typography, Alert, CircularProgress
+  Container, Box, TextField, Button, Typography, Alert, CircularProgress, Paper
 } from '@mui/material';
 
 const LoginPage = () => {
@@ -52,17 +53,37 @@ const LoginPage = () => {
 
   return (
     <Container component="main" maxWidth="xs">
-       <Box
-         sx={{
-           marginTop: 8,
-           display: 'flex',
-           flexDirection: 'column',
-           alignItems: 'center',
-         }}
-       >
-         <Typography component="h1" variant="h5">
-           Sign in
-         </Typography>
+      <Paper 
+        elevation={5} 
+        sx={{ 
+          p: 4, 
+          mt: 8, 
+          borderRadius: 2,
+          border: `1px solid ${theme => theme.palette.divider}`,
+        }}
+      >
+    <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <Box
+            component="img"
+            src={companyLogo}
+            alt="Company Logo"
+            sx={{
+              width: 120,
+              height: 'auto',
+              mb: 3
+            }}
+          />
+          
+          <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
+            Employee Portal Login
+          </Typography>
+          
          {(localError || (reduxError && typeof reduxError === 'string')) && (
            <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
              {localError || reduxError}
@@ -104,6 +125,7 @@ const LoginPage = () => {
            </Button>
          </Box>
        </Box>
+       </Paper>
     </Container>
   );
 };

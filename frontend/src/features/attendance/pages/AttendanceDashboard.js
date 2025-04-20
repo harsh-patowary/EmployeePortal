@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { useSelector } from 'react-redux';
-import { selectIsManager, selectRole } from '../../../redux/employeeSlice';
+import React, { useState, useEffect, useMemo } from "react"; // Import useMemo
+import { useSelector, useDispatch } from 'react-redux'; // Import useDispatch
+// Import fetchManagerTeam and relevant selectors
+import { selectIsManager, selectRole, selectTeamMembers, selectLoadingTeam, fetchManagerTeam } from '../../../redux/employeeSlice'; 
 import PermissionGate from '../../../components/PermissionGate';
 import {
   Box,
@@ -27,8 +28,9 @@ import MoreVertIcon from "@mui/icons-material/MoreVert"; // For mobile menu
 import FilterListIcon from "@mui/icons-material/FilterList";
 import AttendanceList from "../components/AttendanceList";
 import AttendanceForm from "../components/AttendanceForm";
-import attendanceService from '../services/attendanceService'; // Assuming this is where the service is located
+import attendanceService from '../services/attendanceService'; 
 import { isTokenValid, redirectToLogin } from '../../../utils/authUtils';
+import { format, isToday } from 'date-fns'; // Import isToday
 
 const AttendanceDashboard = () => {
   const theme = useTheme();
@@ -38,52 +40,52 @@ const AttendanceDashboard = () => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
   
-  // Get role information
+  // Get role and team information
+  const dispatch = useDispatch(); // Get dispatch function
   const isManager = useSelector(selectIsManager);
   const userRole = useSelector(selectRole);
+  const teamMembers = useSelector(selectTeamMembers); // Get manager's team
+  const loadingTeam = useSelector(selectLoadingTeam); // Get team loading state
   
   // Debug logging
-  console.log('AttendanceDashboard rendering with roles:', {
+  console.log('AttendanceDashboard rendering with roles/team:', {
     isManager,
-    userRole
+    userRole,
+    teamMembersCount: teamMembers?.length,
+    loadingTeam
   });
   
-  const [attendanceData, setAttendanceData] = useState([]);
+  const [allAttendanceData, setAllAttendanceData] = useState([]); // Store all fetched data
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Dummy summary data - would be fetched from API in production
-  const summary = {
-    totalEmployees: 42,
-    presentToday: 36,
-    absentToday: 3,
-    onLeave: 3,
-    attendanceRate: 86,
-  };
+  // Fetch manager's team if not already loaded
+  // useEffect(() => {
+  //   if (isManager && teamMembers.length === 0 && loadingTeam === 'idle') {
+  //     console.log("AttendanceDashboard: Dispatching fetchManagerTeam");
+  //     dispatch(fetchManagerTeam());
+  //   }
+  // }, [isManager, teamMembers, loadingTeam, dispatch]);
 
-  // Add useEffect to fetch data
+  // Fetch all attendance data (managers need this to filter later)
   useEffect(() => {
     const fetchAttendanceData = async () => {
-      // Check token validity before making request
-      if (!isTokenValid()) {
-        console.error('Invalid token, redirecting to login');
-        redirectToLogin();
-        return;
-      }
+      // ... (token check remains the same) ...
+      if (!isTokenValid()) { /* ... */ return; }
       
       try {
         setLoading(true);
         setError(null);
-        const response = await attendanceService.getAttendanceRecords();
-        console.log('Fetched attendance data:', response);
+        // Fetch all records - filtering happens client-side for managers
+        const response = await attendanceService.getAttendanceRecords(); 
+        console.log('Fetched ALL attendance data:', response);
         
-        // Handle different response formats
         if (response && (response.results || Array.isArray(response))) {
-          setAttendanceData(response.results || response);
+          setAllAttendanceData(response.results || response); // Store all data
+        } else {
+          setAllAttendanceData([]); // Ensure it's an array
         }
         
-        // Update summary based on today's data
-        // You'll need to implement this based on your data structure
       } catch (err) {
         console.error('Error fetching attendance data:', err);
         setError('Failed to load attendance data');
@@ -96,7 +98,67 @@ const AttendanceDashboard = () => {
     };
     
     fetchAttendanceData();
-  }, []);
+  }, []); // Fetch once on mount
+
+  // Filter attendance data for the manager's team
+  const managerTeamAttendanceData = useMemo(() => {
+    // *** ADD LOGS HERE ***
+    console.log("Filtering Check: isManager:", isManager);
+    console.log("Filtering Check: teamMembers:", teamMembers);
+    console.log("Filtering Check: allAttendanceData (length):", allAttendanceData?.length);
+    
+    if (!isManager || !teamMembers || teamMembers.length === 0) {
+      console.log("Filtering Result: Not manager or team empty, returning [].");
+      return []; // Return empty if not manager or team not loaded/empty
+    }
+    
+    // Ensure teamMembers has IDs
+    const teamMemberIds = new Set(teamMembers.map(member => member.id).filter(id => id != null)); // Ensure IDs exist
+    console.log("Filtering Check: Team Member IDs:", teamMemberIds);
+
+    if (teamMemberIds.size === 0) {
+        console.log("Filtering Result: No valid team member IDs found, returning [].");
+        return [];
+    }
+
+    const filtered = allAttendanceData.filter(record => {
+        // Ensure record.employee exists before checking
+        const employeeId = record?.employee; 
+        const shouldInclude = employeeId != null && teamMemberIds.has(employeeId);
+        // Log individual record check if needed for deep debugging
+        // console.log(`Record ID ${record?.id}, Employee ID ${employeeId}, In Team: ${shouldInclude}`);
+        return shouldInclude;
+    });
+    
+    console.log("Filtering Result: Filtered Data (length):", filtered.length);
+    return filtered;
+  }, [isManager, teamMembers, allAttendanceData]);
+
+  // Calculate live summary stats based on filtered data for today
+  const summary = useMemo(() => {
+    // *** ADD LOG HERE ***
+    console.log("Summary Calculation: Using data (length):", (isManager ? managerTeamAttendanceData : allAttendanceData)?.length);
+    const dataToUse = isManager ? managerTeamAttendanceData : allAttendanceData;
+    const todayRecords = dataToUse.filter(record => isToday(new Date(record.date)));
+    
+    const present = todayRecords.filter(r => r.status === 'present' || r.status === 'remote' || r.status === 'half_day').length;
+    const absent = todayRecords.filter(r => r.status === 'absent').length;
+    const leave = todayRecords.filter(r => r.status === 'leave').length;
+    // Use team size for manager, or fetch total employees for admin?
+    const total = isManager ? teamMembers.length : (/* fetch total count? */ dataToUse.length > 0 ? new Set(dataToUse.map(r => r.employee)).size : 0); 
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    console.log("Calculated Summary:", { total, present, absent, leave, rate });
+
+    return {
+      totalEmployees: total,
+      presentToday: present,
+      absentToday: absent,
+      onLeave: leave,
+      attendanceRate: rate,
+    };
+  }, [isManager, managerTeamAttendanceData, allAttendanceData, teamMembers]);
+
 
   // Handle mobile menu
   const handleOpenMobileMenu = (event) => {
@@ -124,21 +186,21 @@ const AttendanceDashboard = () => {
     setSelectedRecord(null);
   };
 
-  const handleAttendanceSaved = (newRecord) => {
-    // In a real app, you'd call an API to save the record
-    // Then refresh the data
-    
-    if (selectedRecord) {
-      // Update existing record
-      setAttendanceData(prev => 
-        prev.map(item => item.id === selectedRecord.id ? { ...newRecord, id: selectedRecord.id } : item)
-      );
-    } else {
-      // Add new record with generated ID
-      const maxId = Math.max(0, ...attendanceData.map(item => item.id));
-      setAttendanceData(prev => [...prev, { ...newRecord, id: maxId + 1 }]);
-    }
-    
+  // Modify handleAttendanceSaved to update the main list
+  const handleAttendanceSaved = (savedRecord) => {
+    console.log("Attendance Saved:", savedRecord);
+    setAllAttendanceData(prev => {
+        const existingIndex = prev.findIndex(item => item.id === savedRecord.id);
+        if (existingIndex > -1) {
+            // Update
+            const updated = [...prev];
+            updated[existingIndex] = savedRecord;
+            return updated;
+        } else {
+            // Add (assuming API returns the full record including ID)
+            return [savedRecord, ...prev].sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+    });
     handleCloseAttendanceForm();
   };
 
@@ -201,7 +263,7 @@ const AttendanceDashboard = () => {
     const otherElementsHeight = isMobile ? 320 : 240;
     return Math.max(400, viewportHeight - otherElementsHeight);
   };
-   console.log('Rendering AttendanceDashboard:', { attendanceData, loading, error });
+   console.log('Rendering AttendanceDashboard with filtered data:', { managerTeamAttendanceData, loading, error });
   return (
     <Box 
       sx={{ 
@@ -302,16 +364,18 @@ const AttendanceDashboard = () => {
         </Box>
       </Box>
       
-      {/* Stats cards - responsive grid */}
+      {/* Stats cards - Uses the calculated summary */}
       <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
         <Grid item xs={6} sm={6} md={3}>
           <StatCard
             icon={<PeopleAltIcon color="primary" fontSize={isMobile ? "small" : "medium"} />}
-            title="Total Employees"
+            // Use team size for manager
+            title={isManager ? "Team Size" : "Total Employees"} 
             value={summary.totalEmployees}
             color={theme.palette.primary.main}
           />
         </Grid>
+        {/* Other StatCards use summary directly */}
         <Grid item xs={6} sm={6} md={3}>
           <StatCard
             icon={<CheckCircleIcon color="success" fontSize={isMobile ? "small" : "medium"} />}
@@ -356,7 +420,8 @@ const AttendanceDashboard = () => {
       >
         <Box sx={{ p: { xs: 2, sm: 3 }, pb: 0 }}>
           <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ mb: 2 }}>
-            Attendance Records
+            {/* Title changes based on role */}
+            {isManager ? "Team Attendance Records" : "Attendance Records"} 
           </Typography>
           <Divider />
         </Box>
@@ -373,11 +438,13 @@ const AttendanceDashboard = () => {
           },
         }}>
           <AttendanceList
-            attendanceData={attendanceData}
-            loading={loading}
-            error={error}
-            onEdit={isManager ? handleOpenAttendanceForm : undefined}
+            // Pass the filtered data for managers
+            attendanceData={isManager ? managerTeamAttendanceData : allAttendanceData} 
+            loading={loading || (isManager && loadingTeam === 'pending')}  // Consider team loading state
+            error={error || (isManager && loadingTeam === 'failed' ? 'Failed to load team members' : null)}
+            onEdit={isManager ? handleOpenAttendanceForm : undefined} // Only managers can edit
             isMobile={isMobile}
+            personalView={false} // This is the management view
           />
         </Box>
       </Paper>
@@ -388,6 +455,8 @@ const AttendanceDashboard = () => {
         onClose={handleCloseAttendanceForm}
         attendanceRecord={selectedRecord}
         onSave={handleAttendanceSaved}
+        // Pass team members if manager, otherwise maybe allEmployees for admin?
+        // The form logic will handle which list to actually use based on role
       />
     </Box>
   );

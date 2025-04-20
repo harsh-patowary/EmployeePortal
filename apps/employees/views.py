@@ -31,6 +31,7 @@ class LoginView(APIView):
         password = request.data.get("password")
 
         user = authenticate(username=username, password=password)
+        print(user)
         if user:
             refresh = RefreshToken.for_user(user)
             print(f"refresh: {refresh}\n")
@@ -104,7 +105,7 @@ def get_manager_team(request):
     user = request.user
     try:
         employee = Employee.objects.get(user=user)
-        
+        print(f"Getting team for manager....... {employee.first_name} {employee.last_name}")
         # Check if user is a manager
         if not employee.is_manager and employee.role not in ['manager', 'admin', 'hr', 'director']:
             return Response(
@@ -114,7 +115,11 @@ def get_manager_team(request):
         
         # Get direct reports (employees where this user is the manager)
         team_members = employee.team_members.all()
-        
+        simplified_team_data = [
+            {'id': member.id, 'name': f"{member.first_name} {member.last_name}"}
+            for member in team_members
+        ]
+        print("Simplified Team Data:", simplified_team_data)
         # You might want to add additional data or statistics
         team_data = {
             'manager': {
