@@ -13,7 +13,7 @@ frontend/
 └── package.json
 
 
-gitlab_token: glpat-u47YXpDXdgh5iivCpq1o
+gitlab_token: glpat-m-hwYiW9pLca84cQyGRo
 
 superuser: root | toor
 site login: rk12345 admin@123
