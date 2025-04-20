@@ -18,8 +18,8 @@ function useAttendance(employeeId = null, options = {}) {
     
     // Simple hash to compare data
     const hashRecord = (record) => {
-      const { id, check_in, check_out, status, date } = record;
-      return `${id}-${check_in}-${check_out}-${status}-${date}`;
+      const { id, check_in, check_out, status, date, notes } = record;
+      return `${id}-${check_in}-${check_out}-${status}-${date}-${notes}`;
     };
     
     const oldHashes = new Set(oldData.map(hashRecord));
