@@ -10,20 +10,36 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'is_staff']
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = UserSerializer(read_only=True) # Make user read-only if not already
 
     class Meta:
         model = Employee
         fields = [
             'id',
             'user', # Include the nested user data
+            'eID', # Added eID
             'first_name',
             'last_name',
             'email',
+            'phone_number', # Added phone_number
+            'DoB', # Added DoB
             'position',
             'department',
+            'salary', # Added salary
+            'date_hired', # Added date_hired
+            'manager', # Added manager ID
             'is_manager', # Include flags if needed by frontend
-            'role'
+            'role',
+            # --- ADD NEW BALANCE FIELDS ---
+            'paid_leave_balance',
+            'sick_leave_balance',
+        ]
+        read_only_fields = [
+            'user',
+            'eID',
+            'email', # Usually derived from user or unique
+            # Make balances read-only in general employee endpoints
+            
         ]
 
 class RegisterSerializer(serializers.ModelSerializer):

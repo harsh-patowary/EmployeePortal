@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { format, parseISO, isValid } from 'date-fns';
 import {
   Box,
   Button,
@@ -11,7 +12,7 @@ import {
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import attendanceService from "../services/attendanceService";
-import { format } from "date-fns";
+// import { format } from "date-fns";
 
 function CheckInOutCard({ employeeId, todayRecord, onAttendanceRecorded }) {
   const [loading, setLoading] = useState(false);
@@ -117,8 +118,16 @@ function CheckInOutCard({ employeeId, todayRecord, onAttendanceRecorded }) {
 
   // Format time for display
   const formatTime = (timeStr) => {
-    if (!timeStr) return "—";
-    return timeStr.substring(0, 5); // Format as HH:MM
+    if (!timeStr) return '—'; // Return em-dash for null/empty strings
+    try {
+        // Handle full ISO strings or just time strings
+        // Use parseISO for full ISO strings, otherwise try creating a date with a base
+        const date = timeStr.includes('T') ? parseISO(timeStr) : new Date(`1970-01-01T${timeStr}`);
+        if (!isValid(date)) return '—'; // Return em-dash if parsing fails
+        return format(date, 'HH:mm'); // Format as HH:mm
+    } catch {
+        return '—'; // Return em-dash on any unexpected error
+    }
   };
 
   return (

@@ -2,7 +2,8 @@ import React, { useEffect } from 'react'; // Ensure useEffect is imported
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import ThemeProviderWrapper from './theme/ThemeContext';
 import AppLayout from './layout/AppLayout';
-import LoginPage from './pages/Loginpage';
+// import LoginPage from './pages/Loginpage';
+import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AttendanceDashboard from './features/attendance/pages/AttendanceDashboard';
@@ -11,6 +12,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import TasksPage from './pages/TasksPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import LeaveDashboardPage from './features/leave/pages/LeaveDashboardPage'; // <-- Import Leave Page
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchUserDetails,
@@ -18,6 +20,7 @@ import {
   fetchAllEmployees,
   selectIsAuthenticated,
   selectUser, // Import selectUser
+  selectUserRole, // <-- Make sure this is imported if used in Effect 2
   selectLoadingTeam, // Import loading status selectors
   selectLoadingAllEmployees, // Import loading status selectors
   selectTeamMembers, // Import data selectors to check if already loaded
@@ -45,10 +48,11 @@ function App() {
 
   // Effect 1: Fetch User Details on initial load if token exists but not authenticated
   useEffect(() => {
+    const tokenExists = !!localStorage.getItem('token'); // More robust check
     const token = localStorage.getItem('token');
     console.log("App Effect 1 Triggered. Token exists:", !!token, "Is Authenticated in state:", isAuthenticated);
 
-    if (token && !isAuthenticated) {
+    if (tokenExists && (!isAuthenticated || !user)) {
        console.log("App Effect 1: Conditions met. Dispatching fetchUserDetails.");
        dispatch(fetchUserDetails())
          .catch(error => {
@@ -110,6 +114,7 @@ function App() {
           >
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="my-attendance" element={<EmployeeAttendancePage />} />
+            <Route path="leave" element={<LeaveDashboardPage />} /> {/* <-- ADD LEAVE ROUTE */}
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="tasks" element={<TasksPage />} />
             <Route path="settings" element={<SettingsPage />} />

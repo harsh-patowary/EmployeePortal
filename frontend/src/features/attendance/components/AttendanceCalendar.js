@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { format, parseISO, isValid } from 'date-fns';
 import Calendar from "react-calendar";
 import {
   Box,
@@ -9,7 +10,7 @@ import {
   CardContent,
   useTheme,
 } from "@mui/material";
-import { format } from "date-fns";
+// import { format } from "date-fns";
 import "react-calendar/dist/Calendar.css";
 // Still import the custom CSS for basic styling
 import "../styles/calendar.css";
@@ -75,8 +76,16 @@ function AttendanceCalendar({ attendanceData }) {
 
   // Format time for display
   const formatTime = (timeStr) => {
-    if (!timeStr) return "—";
-    return timeStr.substring(0, 5); // Format as HH:MM
+    if (!timeStr) return '—'; // Return em-dash for null/empty strings
+    try {
+        // Handle full ISO strings or just time strings
+        // Use parseISO for full ISO strings, otherwise try creating a date with a base
+        const date = timeStr.includes('T') ? parseISO(timeStr) : new Date(`1970-01-01T${timeStr}`);
+        if (!isValid(date)) return '—'; // Return em-dash if parsing fails
+        return format(date, 'HH:mm'); // Format as HH:mm
+    } catch {
+        return '—'; // Return em-dash on any unexpected error
+    }
   };
 
   // Get color for status chip from theme

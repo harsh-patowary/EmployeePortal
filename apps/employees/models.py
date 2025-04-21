@@ -1,6 +1,7 @@
 from datetime import timezone
 from django.contrib.auth.models import User
 from django.db import models
+from decimal import Decimal # Import Decimal
 
 class Employee(models.Model):
     # Define role choices
@@ -32,7 +33,6 @@ class Employee(models.Model):
     department = models.CharField(max_length=255)
     salary = models.DecimalField(max_digits=10, decimal_places=2)
     date_hired = models.DateField(null=True, blank=True)
-    # Add this field to your Employee model
     manager = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
@@ -40,6 +40,18 @@ class Employee(models.Model):
         blank=True,
         related_name='team_members'
     )
+
+    # --- NEW LEAVE BALANCE FIELDS ---
+    paid_leave_balance = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('0.00'),
+        help_text="Available paid leave days."
+    )
+    sick_leave_balance = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('0.00'),
+        help_text="Available sick leave days."
+    )
+    # Add other balance fields corresponding to LEAVE_TYPE_CHOICES if needed
+    # unpaid_leave_taken = models.DecimalField(...) # Might track taken unpaid leave separately
 
     def __str__(self):
         return self.user.username
@@ -51,3 +63,6 @@ class Employee(models.Model):
         else:
             self.is_manager = False
         super().save(*args, **kwargs)
+        
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"

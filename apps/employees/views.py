@@ -1,14 +1,11 @@
 from django.shortcuts import render
-
-# Create your views here.
 from django.contrib.auth import get_user_model, authenticate
-from rest_framework import generics, permissions
-from rest_framework.permissions import AllowAny
+from rest_framework import generics, permissions, status # Added status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from apps.employees.models import Employee
 from apps.employees.serializers import RegisterSerializer, UserSerializer, EmployeeSerializer
 
@@ -55,7 +52,6 @@ class EmployeeDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = EmployeeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-# Add this new view
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_details(request):
@@ -63,39 +59,19 @@ def get_user_details(request):
     user = request.user
     try:
         employee = Employee.objects.get(user=user)
-        
-        # Include both the is_manager flag and the new role field
-        is_manager = employee.is_manager
-        role = employee.role
-        
-        # Debug info
-        print(f"Employee {employee.first_name} role: {role}, is_manager: {is_manager}")
-        
-        data = {
-            'id': employee.id,
-            'user_id': user.id,
-            'username': user.username,
-            'first_name': employee.first_name,
-            'last_name': employee.last_name,
-            'email': employee.email,
-            'position': employee.position,
-            'department': employee.department,
-            'is_manager': is_manager,
-            'role': role,  # Include the new role field
-        }
+        serializer = EmployeeSerializer(employee)
+        data = serializer.data
+
+        # Optional: Keep debug print if needed
+        print(f"Employee {employee.first_name} role: {data.get('role')}, is_manager: {data.get('is_manager')}")
+
     except Employee.DoesNotExist:
-        # User doesn't have an employee record
-        data = {
-            'user_id': user.id,
-            'username': user.username,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email,
-            'is_manager': False,
-            'role': 'employee'  # Default role
-        }
-    
-    print("Returning user details:", data)
+        return Response(
+            {"detail": "Employee profile not found for this user."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    print("Returning user details:", data) # Now logs the serialized data
     return Response(data)
 
 @api_view(['GET'])
