@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { format, parseISO, isValid, startOfDay } from 'date-fns';
 import Calendar from 'react-calendar';
 import {
   Box, Typography, Chip, Grid, Card, CardContent, useTheme, List, ListItem, ListItemText, Avatar, Divider, CircularProgress, Alert
 } from '@mui/material';
-import { format, startOfDay, parseISO } from 'date-fns'; // Ensure parseISO is imported if needed elsewhere
+// import { format, startOfDay, parseISO } from 'date-fns'; // Ensure parseISO is imported if needed elsewhere
 import 'react-calendar/dist/Calendar.css';
 import '../styles/calendar.css';
 import AttendanceForm from './AttendanceForm'; // <-- Import AttendanceForm
@@ -37,14 +38,15 @@ const getStatusChip = (status, theme) => {
 
 // Helper function to format time
 const formatTime = (timeStr) => {
-  if (!timeStr) return '—';
+  if (!timeStr) return '—'; // Return em-dash for null/empty strings
   try {
-    // Assuming timeStr is like "HH:MM:SS" or part of ISO string
-    const date = new Date(`1970-01-01T${timeStr}`);
-    if (isNaN(date)) return '—'; // Handle invalid time
-    return format(date, 'HH:mm');
-  } catch (e) {
-    return '—'; // Handle parsing errors
+      // Handle full ISO strings or just time strings
+      // Use parseISO for full ISO strings, otherwise try creating a date with a base
+      const date = timeStr.includes('T') ? parseISO(timeStr) : new Date(`1970-01-01T${timeStr}`);
+      if (!isValid(date)) return '—'; // Return em-dash if parsing fails
+      return format(date, 'HH:mm'); // Format as HH:mm
+  } catch {
+      return '—'; // Return em-dash on any unexpected error
   }
 };
 
