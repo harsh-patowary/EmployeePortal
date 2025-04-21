@@ -4,7 +4,8 @@ import storage from 'redux-persist/lib/storage'; // defaults to localStorage
 import { combineReducers } from 'redux';
 import authReducer from './authSlice';
 import employeeReducer from './employeeSlice';
-// import your other reducers
+// import attendanceReducer from './attendanceSlice'; // Assuming you have this
+import leaveReducer from '../features/leave/slices/leaveSlice'; // <-- Import leave slice
 
 const persistConfig = {
   key: 'root',
@@ -15,6 +16,8 @@ const persistConfig = {
 const rootReducer = combineReducers({
   auth: authReducer,
   employee: employeeReducer,
+  // attendance: attendanceReducer, // Assuming you have this
+  leave: leaveReducer, // <-- Add leave reducer
   // other reducers
 });
 
@@ -28,6 +31,7 @@ export const store = configureStore({
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
     }),
+  devTools: process.env.NODE_ENV !== 'production',
 });
 
 export const persistor = persistStore(store);

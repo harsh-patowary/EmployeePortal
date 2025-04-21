@@ -21,6 +21,10 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/employees/', include('apps.employees.urls')),
+    # Include authentication URLs (adjust path as needed)
+    path('api/employees/', include('apps.employees.urls')), # Assuming employee app handles auth
+    # Include attendance URLs
     path('api/attendance/', include('apps.attendance.urls')),
+    # Include leave management URLs
+    path('api/leave/', include('apps.leave_management.urls')),
 ]

@@ -240,20 +240,10 @@ export const selectEmployeeLoading = (state) => state.employee.isLoading;
 export const selectEmployeeError = (state) => state.employee.error;
 
 // Role-based selectors
-export const selectIsManager = (state) => {
-  const user = state.employee.user;
-  const isMgr = user ? (user.is_manager === true || ['manager', 'admin', 'hr', 'director'].includes(user.role)) : false;
-  console.log('selectIsManager (employeeSlice) called, user:', user, 'result:', isMgr); // Debug log
-  return isMgr;
-};
+export const selectIsManager = (state) => state.employee.user?.role === 'manager'; // Example, adjust as needed
+export const selectRole = (state) => state.employee.user?.role;
 
 // New role-based selectors
-export const selectRole = (state) => {
-  const role = state.employee.user?.role || 'employee'; // Default to 'employee' if no user/role
-  console.log('selectRole (employeeSlice) called, user:', state.employee.user, 'result:', role); // Debug log
-  return role;
-};
-
 export const selectPermissions = (state) => {
   const role = state.employee.user?.role;
   return role ? getRolePermissions(role) : [];
@@ -274,5 +264,7 @@ export const selectUserRole = (state) => state.employee.user?.role;
 export const selectTeamMembers = (state) => state.employee.teamMembers;
 export const selectLoadingTeam = (state) => state.employee.loadingTeam;
 export const selectLoadingAllEmployees = (state) => state.employee.loadingAllEmployees;
+export const selectPaidLeaveBalance = (state) => state.employee.user?.paid_leave_balance ?? 0;
+export const selectSickLeaveBalance = (state) => state.employee.user?.sick_leave_balance ?? 0;
 
 export default employeeSlice.reducer;

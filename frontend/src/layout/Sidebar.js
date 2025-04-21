@@ -25,6 +25,7 @@ import EmailIcon from "@mui/icons-material/Email";
 import TaskIcon from "@mui/icons-material/Task";
 import WorkIcon from "@mui/icons-material/Work";
 import HelpIcon from "@mui/icons-material/Help";
+import EventNoteIcon from '@mui/icons-material/EventNote'; // Example icon for Leave
 import { selectIsManager, logout } from "../redux/employeeSlice";
 
 // Fixed width for the drawer
@@ -85,6 +86,7 @@ const getNavItems = () => {
   const baseItems = [
     { name: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
     { name: "My Attendance", icon: <EventAvailableIcon />, path: "/my-attendance" },
+    { name: "Leave Management", icon: <EventNoteIcon />, path: "/leave" }, // <-- ADD LEAVE LINK
     { name: "Projects", icon: <WorkIcon />, path: "/projects" },
     { name: "Tasks", icon: <TaskIcon />, path: "/tasks" },
   ];

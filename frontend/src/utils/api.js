@@ -44,6 +44,7 @@ api.interceptors.response.use(
         
         console.log('Attempting to refresh token...');
         
+        // Use BASE axios for refresh to avoid interceptor loop
         const response = await axios.post(`${API_URL}/employees/token/refresh/`, {
           refresh: refreshToken
         });
@@ -51,13 +52,20 @@ api.interceptors.response.use(
         // Save the new token
         localStorage.setItem('token', response.data.access);
         
-        // Update header and retry
+        // Update header on the original request config
         originalRequest.headers['Authorization'] = `Bearer ${response.data.access}`;
-        return axios(originalRequest);
+        
+        // Retry the original request using the CONFIGURED 'api' instance
+        console.log('Retrying original request with new token...'); // Add log
+        return api(originalRequest); // <--- CHANGE THIS LINE
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
+        // Implement logout logic (clear tokens, redirect)
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user'); // Clear user data too
+        // Redirect to login page - use window.location for simplicity here
+        // or dispatch a logout action if your setup allows interceptors to dispatch
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -75,7 +83,6 @@ export const getAuthHeader = () => {
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
-
 /**
  * Handle API errors consistently
  * @param {Error} error - The error from axios
