@@ -1,0 +1,73 @@
+/* Add this to your project's CSS */
+.attendance-present {
+  background-color: rgba(76, 175, 80, 0.2) !important;
+  font-weight: bold;
+}
+
+.attendance-absent {
+  background-color: rgba(244, 67, 54, 0.2) !important;
+  font-weight: bold;
+}
+
+.attendance-leave {
+  background-color: rgba(255, 152, 0, 0.2) !important;
+  font-weight: bold;
+}
+
+.attendance-remote {
+  background-color: rgba(3, 169, 244, 0.2) !important;
+  font-weight: bold;
+}
+
+.attendance-half-day {
+  background-color: rgba(156, 39, 176, 0.2) !important;
+}
+
+.calendar-container {
+  margin: 0 auto;
+}
+
+/* Make the calendar responsive */
+.react-calendar {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0 !important;
+  font-family: inherit !important;
+  padding: 10px;
+}
+
+/* Improve tile appearance */
+.react-calendar__tile {
+  padding: 12px 6px !important;
+  position: relative !important;
+}
+
+/* Better hover effects for all tiles */
+.react-calendar__tile:enabled:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+}
+
+.react-calendar__tile:enabled:focus {
+  background-color: rgba(66, 165, 245, 0.1) !important;
+}
+
+.react-calendar__tile--active {
+  background-color: #1976d2 !important;
+  color: white !important;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .react-calendar__tile:enabled:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Make sure text is visible in all status backgrounds */
+[data-theme="dark"] .attendance-present,
+[data-theme="dark"] .attendance-absent,
+[data-theme="dark"] .attendance-leave,
+[data-theme="dark"] .attendance-remote,
+[data-theme="dark"] .attendance-half-day {
+  color: #ffffff;
+}

@@ -1,0 +1,102 @@
+frontend/
+├── src/
+│   ├── assets/                
+│   ├── components/            
+│   ├── features/              
+│   ├── layout/                # New folder for layout components
+│   │   └── Sidebar.js         # Sidebar for navigation
+│   ├── pages/                 
+│   ├── redux/                 
+│   ├── services/              
+│   ├── utils/                 
+│   └── App.js                 
+└── package.json
+
+
+gitlab_token: glpat-m-hwYiW9pLca84cQyGRo
+
+superuser: root | toor
+site login: rk12345 admin@123
+Manager: Username=jb19370, Password=manager123
+Employee: Username=lt45807, Password=employee123
+
+
+temp_access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ1MTE5NzU5LCJpYXQiOjE3NDUxMTk0NTksImp0aSI6ImY5YzBhNTA5MmVlMTQwZmFiZWVjNmY3YTYzZTg0ZjQxIiwidXNlcl9pZCI6N30.Hd6XPRp4juKdbxAB5sgFw4Uoc63EfL0d8CUuhx4kQZU
+
+Created employee: Linda Thomas - Username: lt45807 - ID: ZLEB2FJ
+  Created employee: Daniel Johnson - Username: dj84772 - ID: MMQQ1IS
+  Created employee: Susan Thomas - Username: st42916 - ID: 6G9GYVH
+  Created employee: Richard Hall - Username: rh13742 - ID: 5HP5OVY
+  Created employee: Nancy Davis - Username: nd77118 - ID: VJZ46AB
+  Created employee: Michael Martinez - Username: mm60304 - ID: EHEM1N3
+  Created employee: Barbara Jackson - Username: bj48495 - ID: 2PB2DFO
+  Created employee: Jessica Allen - Username: ja32579 - ID: 73QS6UA
+  Created employee: William Miller - Username: wm17414 - ID: 5SBK9AB
+  Created employee: Mark Rodriguez - Username: mr81355 - ID: O3IU4GK
+  Created employee: Linda White - Username: lw77374 - ID: LPI72GJ
+  Created employee: Mary Martinez - Username: mm02125 - ID: 8ZLA2TQ
+  Created employee: Joseph Robinson - Username: jr79815 - ID: 4X1OMUX
+  Created employee: Richard Lee - Username: rl53696 - ID: X51IP2F
+  Created employee: Christopher Lee - Username: cl00611 - ID: AIAJUA7
+  Created employee: Christopher Thomas - Username: ct65125 - ID: U3968GK
+  Created employee: Mark Taylor - Username: mt31858 - ID: INHH0V2
+  Created employee: Barbara Rodriguez - Username: br73861 - ID: LV1EMAV
+  Created employee: Susan Hernandez - Username: sh37807 - ID: DU7S7AV
+  Created employee: Nancy Williams - Username: nw94279 - ID: 4M1VSSY
+  Created employee: Mark Johnson - Username: mj59673 - ID: MD87EB4
+  Created employee: Elizabeth Jackson - Username: ej09190 - ID: U1Z6T54
+  Created employee: Sarah Allen - Username: sa88159 - ID: 6ZTN3H1
+  Created employee: John Thomas - Username: jt35375 - ID: GQZMNQI
+  Created employee: Jessica Hall - Username: jh52783 - ID: 3CFZRPQ
+
+
+    Created manager: Jessica Brown - Username: jb19370 - ID: 6H6PV22 (hr)
+  Created manager: William Walker - Username: ww71274 - ID: EUO9YWJ (director)
+  Created manager: Linda Robinson - Username: lr55410 - ID: AQIUTNI (director)
+  Created manager: Jennifer Taylor - Username: jt84681 - ID: H3D1VSH (manager)
+  Created manager: Sandra Lewis - Username: sl53603 - ID: OTFV460 (manager)
+
+
+  Assigning employees to managers...
+  Assigned Linda Thomas to Jennifer Taylor
+  No manager found for Daniel Johnson in Finance department
+  Assigned Daniel Johnson to Sandra Lewis (different department)
+  No manager found for Susan Thomas in Customer Support department
+  Assigned Susan Thomas to William Walker (different department)
+  Assigned Richard Hall to Sandra Lewis
+  Assigned Nancy Davis to Sandra Lewis
+  No manager found for Michael Martinez in Human Resources department
+  Assigned Michael Martinez to Linda Robinson (different department)
+  Assigned Barbara Jackson to Sandra Lewis
+  No manager found for Jessica Allen in Sales department
+  Assigned Jessica Allen to Jennifer Taylor (different department)
+  No manager found for William Miller in Finance department
+  Assigned William Miller to Sandra Lewis (different department)
+  No manager found for Mark Rodriguez in Human Resources department
+  Assigned Mark Rodriguez to Jennifer Taylor (different department)
+  No manager found for Linda White in Operations department
+  Assigned Linda White to Jessica Brown (different department)
+  No manager found for Mary Martinez in Sales department
+  Assigned Mary Martinez to Jessica Brown (different department)
+  No manager found for Joseph Robinson in Customer Support department
+  Assigned Joseph Robinson to Sandra Lewis (different department)
+  Assigned Richard Lee to Sandra Lewis
+  No manager found for Christopher Lee in Finance department
+  Assigned Christopher Lee to Jessica Brown (different department)
+  No manager found for Christopher Thomas in Operations department
+  Assigned Christopher Thomas to Jessica Brown (different department)
+  No manager found for Mark Taylor in Human Resources department
+  Assigned Mark Taylor to Sandra Lewis (different department)
+  No manager found for Barbara Rodriguez in Finance department
+  Assigned Barbara Rodriguez to Jessica Brown (different department)
+  No manager found for Susan Hernandez in Customer Support department
+  Assigned Susan Hernandez to William Walker (different department)
+  No manager found for Nancy Williams in Sales department
+  Assigned Nancy Williams to Linda Robinson (different department)
+  No manager found for Mark Johnson in Human Resources department
+  Assigned Mark Johnson to Jennifer Taylor (different department)
+  Assigned Elizabeth Jackson to Sandra Lewis
+  No manager found for Sarah Allen in Sales department
+  Assigned Sarah Allen to Jennifer Taylor (different department)
+  Assigned John Thomas to Jennifer Taylor
+  Assigned Jessica Hall to Jennifer Taylor
