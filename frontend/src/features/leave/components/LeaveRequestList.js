@@ -2,20 +2,14 @@ import React from 'react';
 import {
   Box,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   CircularProgress,
   Chip,
   Button,
   Tooltip,
-  IconButton,
+  Stack, // Import Stack for vertical layout
+  Grid, // Import Grid for layout within the card
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
@@ -76,6 +70,7 @@ const LeaveRequestList = ({
   loading,
   currentUserId,
   onActionClick, // Function to handle approve/reject click
+  onCardClick, // Function to handle clicking the card itself
   isApprovalList = false, // Flag to show action buttons
   // Add onCancelClick, onEditClick if needed for 'My Requests' view
 }) => {
@@ -98,58 +93,90 @@ const LeaveRequestList = ({
   return (
     <Box>
       {title && <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>{title}</Typography>}
-      <TableContainer component={Paper} elevation={0} variant="outlined">
-        <Table size="small">
-          <TableHead sx={{ bgcolor: 'action.hover' }}>
-            <TableRow>
-              {!isApprovalList && <TableCell>Request ID</TableCell>}
-              {isApprovalList && <TableCell>Employee</TableCell>}
-              <TableCell>Type</TableCell>
-              <TableCell>Start Date</TableCell>
-              <TableCell>End Date</TableCell>
-              <TableCell>Duration</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Reason</TableCell>
-              {isApprovalList && <TableCell align="center">Actions</TableCell>}
-              {/* Add columns for Edit/Cancel if needed */}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {requests.map((req) => (
-              <TableRow key={req.id} hover>
-                {!isApprovalList && <TableCell>#{req.id}</TableCell>}
-                {isApprovalList && <TableCell>{req.employee_details?.first_name} {req.employee_details?.last_name}</TableCell>}
-                <TableCell sx={{ textTransform: 'capitalize' }}>{req.leave_type}</TableCell>
-                <TableCell>{formatDate(req.start_date)}</TableCell>
-                <TableCell>{formatDate(req.end_date)}</TableCell>
-                <TableCell>{req.duration_days} day(s)</TableCell>
-                <TableCell>{getStatusChip(req.status)}</TableCell>
-                <TableCell>
+      {/* Use Stack for vertical arrangement of cards */}
+      <Stack spacing={2}>
+        {requests.map((req) => (
+          <Paper
+            key={req.id}
+            // elevation={2} // Remove this direct elevation prop, manage via sx
+            onClick={onCardClick ? () => onCardClick(req) : undefined} // Make card clickable if handler exists
+            sx={(theme) => ({ // Use theme callback to access theme.shadows
+              p: 2,
+              bgcolor: 'background.paper', // Explicitly set background color (default). Change to 'grey.100' or another theme color if needed.
+              color: 'text.primary', // Text color
+              cursor: onCardClick ? 'pointer' : 'default', // Add pointer cursor if clickable
+              border: 'none', // Explicitly remove border if needed, though removing variant="outlined" usually suffices
+              boxShadow: theme.shadows[2], // Default shadow (equivalent to elevation={2})
+              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out', // Add transition for smooth scaling and shadow change
+              '&:hover': { // Apply hover styles unconditionally
+                // color: 'text.secondary', // Optional: Keep or remove based on desired hover effect
+                boxShadow: theme.shadows[4], // Use boxShadow for elevation effect (equivalent to elevation={4})
+                transform: 'scale(1.02)', // Scale up slightly on hover
+              },
+            })}>
+            <Grid container spacing={2} alignItems="center">
+
+              {/* Column 1: Employee/ID, Type, Dates */}
+              <Grid item xs={12} sm={6} md={4}>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                  {isApprovalList
+                    ? `${req.employee_details?.first_name || ''} ${req.employee_details?.last_name || ''}`.trim() || 'Unknown Employee'
+                    : `Request #${req.id}`
+                  }
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                  Type: {req.leave_type}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {formatDate(req.start_date)} - {formatDate(req.end_date)} ({req.duration_days} day(s))
+                </Typography>
+              </Grid>
+
+              {/* Column 2: Status, Reason */}
+              <Grid item xs={12} sm={6} md={4}>
+                <Box mb={1}>{getStatusChip(req.status)}</Box>
+                {/* Conditionally render the reason only if it's NOT the approval list */}
+                {!isApprovalList && (
                   <Tooltip title={req.reason || 'No reason provided'}>
-                    <Typography variant="body2" noWrap sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {req.reason || '-'}
+                    <Typography variant="body2" noWrap sx={{ maxWidth: 300 }}>
+                      Reason: {req.reason || '-'}
                     </Typography>
                   </Tooltip>
-                </TableCell>
-                {isApprovalList && onActionClick && (
-                  <TableCell align="center">
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                      onClick={() => onActionClick(req)}
-                      disabled={req.status !== 'pending' && req.status !== 'manager_approved'} // Example condition
-                    >
-                      Review
-                    </Button>
-                  </TableCell>
                 )}
-                {/* Add Edit/Cancel buttons here based on conditions */}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              </Grid>
+
+              {/* Column 3: Actions */}
+              {isApprovalList && onActionClick && (
+                <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    onClick={(e) => { // Stop propagation if card is also clickable
+                        if (onCardClick) e.stopPropagation();
+                        onActionClick(req);
+                    }}
+                    // Only enable Review for actionable statuses
+                    disabled={req.status !== 'pending' && req.status !== 'manager_approved'}
+                  >
+                    Review
+                  </Button>
+                </Grid>
+              )}
+              {/* Add Edit/Cancel buttons similarly if needed for 'My Requests' view */}
+              {/* Example Cancel Button (only for specific statuses and if not approval list) */}
+              {/* {!isApprovalList && ['pending', 'manager_approved'].includes(req.status) && onCancelClick && (
+                <Grid item xs={12} md={4} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+                  <Button size="small" variant="text" color="error" onClick={() => onCancelClick(req.id)}>
+                    Cancel
+                  </Button>
+                </Grid>
+              )} */}
+
+            </Grid>
+          </Paper>
+        ))}
+      </Stack>
     </Box>
   );
 };

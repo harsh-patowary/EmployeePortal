@@ -19,7 +19,7 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ThemeToggle from '../components/ThemeToggle';
 import Sidebar from './Sidebar';
-import { logout } from '../redux/authSlice';
+import { logout } from '../redux/employeeSlice';
 
 function AppLayout() {
   console.log("--- Rendering AppLayout ---");
@@ -42,9 +42,15 @@ function AppLayout() {
     setAnchorEl(null);
   };
 
+  const handleNavigateToProfile = () => {
+    navigate('/profile');
+    handleProfileMenuClose();
+  };
+
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
+    handleProfileMenuClose();
   };
 
   return (
@@ -97,7 +103,7 @@ function AppLayout() {
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           >
-            <MenuItem onClick={handleProfileMenuClose}>
+            <MenuItem onClick={handleNavigateToProfile}>
               <AccountCircleIcon fontSize="small" sx={{ mr: 1 }} />
               Profile
             </MenuItem>

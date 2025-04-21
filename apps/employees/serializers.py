@@ -55,3 +55,49 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         return user
+
+class ManagerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ('id', 'first_name', 'last_name') # Add other fields if needed
+
+class EmployeeDetailSerializer(serializers.ModelSerializer):
+    # Use the nested serializer for the 'manager' field
+    manager = ManagerSerializer(read_only=True)
+    # Use UserSerializer for nested user details if needed, or StringRelatedField for just username/email
+    # user = UserSerializer(read_only=True)
+    user = serializers.StringRelatedField(read_only=True) # Keep as string for simplicity if that's enough
+
+    class Meta:
+        model = Employee
+        # --- ADD ALL REQUIRED FIELDS HERE ---
+        fields = [
+            'id',
+            'user', # String representation (username/email)
+            'eID',
+            'first_name',
+            'last_name',
+            'email',
+            'phone_number',
+            'DoB',
+            'position', # Make sure 'position' is the correct field name, or use 'job_title' if that's the model field # Added job_title explicitly if it exists and is different from position
+            'department',
+            'salary',
+            'date_hired',
+            'manager', # Nested manager object
+            'is_manager',
+            'role',
+            'paid_leave_balance',
+            'sick_leave_balance',
+            # 'profile_picture_url', # Ensure this field exists on the model or is added via SerializerMethodField if needed
+            # Add any other fields needed by ProfilePage.js
+        ]
+        # Define read_only_fields if necessary, similar to EmployeeSerializer
+        read_only_fields = [
+            'user',
+            'eID',
+            'email',
+            'manager', # Manager is read-only due to ManagerSerializer(read_only=True)
+            'paid_leave_balance',
+            'sick_leave_balance',
+        ]

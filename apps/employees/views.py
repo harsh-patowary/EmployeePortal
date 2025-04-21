@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view, permission_classes
 from apps.employees.models import Employee
-from apps.employees.serializers import RegisterSerializer, UserSerializer, EmployeeSerializer
+from apps.employees.serializers import RegisterSerializer, UserSerializer, EmployeeSerializer, EmployeeDetailSerializer
 
 User = get_user_model()
 
@@ -58,8 +58,9 @@ def get_user_details(request):
     """Get current user details including employee info"""
     user = request.user
     try:
-        employee = Employee.objects.get(user=user)
-        serializer = EmployeeSerializer(employee)
+        # Optimize query by prefetching related manager details
+        employee = Employee.objects.select_related('manager', 'user').get(user=user)
+        serializer = EmployeeDetailSerializer(employee) # Use the detail serializer with nested manager
         data = serializer.data
 
         # Optional: Keep debug print if needed

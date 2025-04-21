@@ -6,6 +6,7 @@ import AppLayout from './layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProfilePage from './pages/ProfilePage'; // <-- Import Profile Page
 import AttendanceDashboard from './features/attendance/pages/AttendanceDashboard';
 import EmployeeAttendancePage from './features/attendance/pages/EmployeeAttendancePage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -113,6 +114,7 @@ function App() {
             }
           >
             <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="profile" element={<ProfilePage />} /> {/* <-- ADD PROFILE ROUTE */}
             <Route path="my-attendance" element={<EmployeeAttendancePage />} />
             <Route path="leave" element={<LeaveDashboardPage />} /> {/* <-- ADD LEAVE ROUTE */}
             <Route path="projects" element={<ProjectsPage />} />
