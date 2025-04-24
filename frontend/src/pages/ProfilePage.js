@@ -65,7 +65,7 @@ function ProfilePage() {
 
   const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '?';
-  const userPosition = user.job_title || user.role || 'Employee';
+  const userPosition = user.job_title || user.position || 'Employee';
 
   console.log('User object in ProfilePage:', JSON.stringify(user, null, 2)); // Log the user object
 
