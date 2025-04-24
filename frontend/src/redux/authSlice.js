@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { resetLeaveActionStatus } from '../features/leave/slices/leaveSlice';
 
 // Check for existing user data in localStorage
 const storedUser = localStorage.getItem('user');
@@ -17,6 +18,7 @@ const authSlice = createSlice({
     loginSuccess: (state, action) => {
       // Debug what we're receiving from the backend
       console.log('Login response in Redux:', action.payload);
+      // dispatch(resetLeaveActionStatus());
       
       state.isAuthenticated = true;
       

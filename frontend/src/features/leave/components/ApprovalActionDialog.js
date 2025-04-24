@@ -49,9 +49,16 @@ const ApprovalActionDialog = ({ open, onClose, request, currentUserRole }) => {
       setRejectionReason("");
       setShowRejectionInput(false);
       setValidationError("");
-      // Optionally reset the slice error state if desired when dialog opens
-      // dispatch(resetLeaveActionStatus());
+      // Reset slice error state when dialog opens
+      dispatch(resetLeaveActionStatus());
     }
+    
+    // Clean up function to reset state when component unmounts or dialog closes
+    return () => {
+      if (!open) {
+        dispatch(resetLeaveActionStatus());
+      }
+    };
   }, [open, request, dispatch]); // Add dispatch to dependency array
 
   const isManagerAction =
@@ -64,10 +71,10 @@ const ApprovalActionDialog = ({ open, onClose, request, currentUserRole }) => {
   const handleApprove = async () => {
     setValidationError("");
     setShowRejectionInput(false); // Ensure rejection input is hidden
-
+    
     let actionToDispatch;
     let thunkCreator; // Store the base thunk creator
-
+    
     if (isManagerAction) {
       actionToDispatch = approveManagerLeaveRequest(request.id);
       thunkCreator = approveManagerLeaveRequest; // Base creator for matching
@@ -86,16 +93,23 @@ const ApprovalActionDialog = ({ open, onClose, request, currentUserRole }) => {
     }
 
     // Dispatch the action
-    const resultAction = await dispatch(actionToDispatch);
+    try {
+      const resultAction = await dispatch(actionToDispatch);
 
-    // Check if the dispatched action was fulfilled using the correct thunk creator
-    if (thunkCreator.fulfilled.match(resultAction)) {
-      onClose(); // Close on success
+      // Check if the dispatched action was fulfilled
+      if (thunkCreator.fulfilled.match(resultAction)) {
+        onClose(); // Close on success
+      } else if (thunkCreator.rejected.match(resultAction)) {
+        // Show local error message
+        setValidationError(resultAction.payload?.detail || resultAction.payload || "Approval failed");
+        // Reset the global action status after a short delay
+        setTimeout(() => dispatch(resetLeaveActionStatus()), 500);
+      }
+    } catch (error) {
+      console.error("Error in approve action:", error);
+      setValidationError("An unexpected error occurred");
+      dispatch(resetLeaveActionStatus());
     }
-    // Error is handled by the slice/page snackbar, but you could add local feedback too
-    // else if (thunkCreator.rejected.match(resultAction)) {
-    //   setValidationError(resultAction.payload?.detail || resultAction.payload || 'Approval failed.');
-    // }
   };
 
   const handleReject = async () => {
@@ -128,16 +142,23 @@ const ApprovalActionDialog = ({ open, onClose, request, currentUserRole }) => {
     }
 
     // Dispatch the action
-    const resultAction = await dispatch(actionToDispatch);
+    try {
+      const resultAction = await dispatch(actionToDispatch);
 
-    // Check if the dispatched action was fulfilled using the correct thunk creator
-    if (thunkCreator.fulfilled.match(resultAction)) {
-      onClose(); // Close on success
+      // Check if the dispatched action was fulfilled
+      if (thunkCreator.fulfilled.match(resultAction)) {
+        onClose(); // Close on success
+      } else if (thunkCreator.rejected.match(resultAction)) {
+        // Show local error message
+        setValidationError(resultAction.payload?.detail || resultAction.payload || "Rejection failed");
+        // Reset the global action status after a short delay
+        setTimeout(() => dispatch(resetLeaveActionStatus()), 500);
+      }
+    } catch (error) {
+      console.error("Error in reject action:", error);
+      setValidationError("An unexpected error occurred");
+      dispatch(resetLeaveActionStatus());
     }
-    // Error is handled by the slice/page snackbar
-    // else if (thunkCreator.rejected.match(resultAction)) {
-    //   setValidationError(resultAction.payload?.detail || resultAction.payload || 'Rejection failed.');
-    // }
   };
 
   // Use this consolidated close handler for the Cancel button and clicking outside

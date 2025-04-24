@@ -1,114 +1,238 @@
-import api from '../../../utils/api'; // Use the configured instance
-import { format, isValid } from 'date-fns'; // Import if needed for formatting
+import api from '../../../utils/api';
+import { format, isValid, parseISO } from 'date-fns'; // Added parseISO for robustness
 
-// Helper to format date safely
+// Helper to format date safely (Improved to handle ISO strings)
 const formatDateForAPI = (date) => {
     if (!date) return null;
-    // Check if it's a Date object (this should be the case now)
+    // Handle Date objects
     if (date instanceof Date && isValid(date)) {
-        return format(date, 'yyyy-MM-dd'); // Format to YYYY-MM-DD
+        return format(date, 'yyyy-MM-dd');
     }
-    // Add fallbacks if needed, but the primary path should handle Date objects
+    // Handle ISO strings (common from API responses or date pickers)
     if (typeof date === 'string') {
-       // ... (existing string parsing logic as fallback) ...
+        try {
+            const parsedDate = parseISO(date); // Try parsing ISO 8601 string
+            if (isValid(parsedDate)) {
+                return format(parsedDate, 'yyyy-MM-dd');
+            }
+        } catch (e) {
+            // Ignore parsing errors and fall through
+        }
     }
     console.warn("Could not format date in formatDateForAPI:", date);
-    return null;
+    return null; // Return null if formatting fails
+};
+
+// --- NEW Fetch Functions ---
+
+/**
+ * Fetches leave requests submitted BY the currently logged-in user.
+ * Assumes backend endpoint like /leave/requests/my/ OR /leave/requests/?scope=my
+ */
+export const fetchMyLeaveRequestsAPI = async () => {
+  try {
+    // Adjust the URL/params based on your backend implementation
+    // Option 1: Specific endpoint: const response = await api.get('/leave/requests/my/');
+    // Option 2: Query parameter:
+    const response = await api.get('/leave/requests/', { params: { scope: 'my' } });
+    console.log("Fetched My Leave Requests:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching my leave requests:", error.response?.data || error.message);
+    throw error; // Re-throw for handling in UI/Redux
+  }
+};
+
+/**
+ * Fetches leave requests that require the logged-in user's APPROVAL.
+ * Backend MUST filter based on user role (Manager, HR) and exclude user's own requests.
+ * Assumes backend endpoint like /leave/requests/pending_approval/ OR /leave/requests/?scope=pending_approval
+ */
+export const fetchPendingApprovalsAPI = async () => {
+  try {
+    // Adjust the URL/params based on your backend implementation
+    // Option 1: Specific endpoint: const response = await api.get('/leave/requests/pending_approval/');
+    // Option 2: Query parameter:
+    const response = await api.get('/leave/requests/', { params: { scope: 'pending_approval' } });
+    console.log("Fetched Pending Approvals:", response.data);
+    // The backend is responsible for returning the correct list based on the user's role (Manager/HR)
+    // and filtering out their own requests.
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching pending approvals:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+/**
+ * Fetches ALL leave requests (e.g., for Admin/HR overview).
+ * Backend MUST enforce permissions (only allow Admin/HR roles).
+ * Assumes backend endpoint like /leave/requests/all/ OR /leave/requests/?scope=all
+ */
+export const fetchAllLeaveRequestsAPI = async (filters = {}) => {
+    // Filters could include status, date range, department etc. passed as query params
+  try {
+    // Adjust the URL/params based on your backend implementation
+    // Option 1: Specific endpoint: const response = await api.get('/leave/requests/all/', { params: filters });
+    // Option 2: Query parameter:
+    const response = await api.get('/leave/requests/', { params: { ...filters, scope: 'all' } });
+    console.log("Fetched All Leave Requests:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching all leave requests:", error.response?.data || error.message);
+    throw error;
+  }
 };
 
 
-// Fetch all relevant leave requests for the user
-export const fetchLeaveRequestsAPI = async () => {
-  // Use 'api' instance, remove manual headers
-  const response = await api.get('/leave/requests/'); // Use relative path if baseURL is set in api.js
-  return response.data;
-};
+// --- Create, Update, Action Functions ---
 
 // Create a new leave request
 export const createLeaveRequestAPI = async (requestData) => {
-  // requestData should now contain Date objects for start_date and end_date
+  // Ensure requestData contains the employee ID passed from the form/thunk
+  console.log("Received requestData in createLeaveRequestAPI:", requestData);
+
   const dataToSend = {
+      employee: requestData.employee, // <-- *** ADD THIS LINE ***
       leave_type: requestData.leave_type,
-      start_date: formatDateForAPI(requestData.start_date), // Format the Date object
-      end_date: formatDateForAPI(requestData.end_date),     // Format the Date object
+      start_date: formatDateForAPI(requestData.start_date),
+      end_date: formatDateForAPI(requestData.end_date),
       reason: requestData.reason,
-      employee: requestData.employee, // Assuming this is passed correctly
-      // No employee field here - backend uses auth
+      // The comment below is likely incorrect based on the error, but keep it for now or remove if confirmed
+      // // DO NOT send employee ID - backend identifies user from auth token
   };
 
-  console.log("Data being sent by createLeaveRequestAPI:", dataToSend); // Check final payload
+  console.log("Data being sent to createLeaveRequestAPI:", dataToSend);
 
-  if (!dataToSend.employee) {
-    throw new Error("Employee ID is missing before sending to API.");
-}
-if (!dataToSend.start_date || !dataToSend.end_date) {
-    throw new Error("Invalid start or end date after formatting.");
-}
+  // Add basic validation before sending
+  if (!dataToSend.employee) { // <-- *** ADD EMPLOYEE VALIDATION ***
+      console.error("Employee ID is missing before sending API request:", requestData.employee);
+      throw new Error("Employee ID is required but missing.");
+  }
+  if (!dataToSend.start_date || !dataToSend.end_date) {
+      console.error("Invalid start or end date after formatting:", requestData.start_date, requestData.end_date);
+      throw new Error("Invalid start or end date provided.");
+  }
+   if (!dataToSend.leave_type) {
+      throw new Error("Leave type is required.");
+  }
 
-  const response = await api.post('/leave/requests/', dataToSend);
-  return response.data;
+  try {
+    // The URL should be the base endpoint for creating requests
+    const response = await api.post('/leave/requests/', dataToSend);
+    return response.data;
+  } catch (error) {
+    // Log the detailed error from the backend
+    console.error("Error creating leave request:", error.response?.data || error.message);
+    // Re-throw the error so the thunk can handle it (e.g., show specific field errors)
+    throw error;
+  }
 };
 
 // Fetch details of a single leave request
 export const fetchLeaveRequestDetailsAPI = async (requestId) => {
-  // Use 'api' instance, remove manual headers
-  const response = await api.get(`/leave/requests/${requestId}/`);
-  return response.data;
+  try {
+    // Backend must ensure user has permission to view this specific request
+    const response = await api.get(`/leave/requests/${requestId}/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching leave request details for ${requestId}:`, error.response?.data || error.message);
+    throw error;
+  }
 };
 
+// --- Action APIs (Add try/catch for robustness) ---
 
-// --- Action APIs ---
-
-// Manager Approve
 export const approveManagerLeaveRequestAPI = async (requestId) => {
-  // Use 'api' instance, remove manual headers
-  const response = await api.post(`/leave/requests/${requestId}/approve_manager/`, {});
-  return response.data;
+  try {
+    const response = await api.post(`/leave/requests/${requestId}/approve_manager/`, {});
+    return response.data;
+  } catch (error) {
+    console.error(`Error approving (manager) leave request ${requestId}:`, error.response?.data || error.message);
+    throw error;
+  }
 };
 
-// Manager Reject
 export const rejectManagerLeaveRequestAPI = async (requestId, reason) => {
-  // Use 'api' instance, remove manual headers
-  const response = await api.post(`/leave/requests/${requestId}/reject_manager/`, { reason });
-  return response.data;
+  try {
+    const response = await api.post(`/leave/requests/${requestId}/reject_manager/`, { reason });
+    return response.data;
+  } catch (error) {
+    console.error(`Error rejecting (manager) leave request ${requestId}:`, error.response?.data || error.message);
+    throw error;
+  }
 };
 
-// HR Approve
 export const approveHrLeaveRequestAPI = async (requestId) => {
-  // Use 'api' instance, remove manual headers
-  const response = await api.post(`/leave/requests/${requestId}/approve_hr/`, {});
-  return response.data;
+   try {
+    const response = await api.post(`/leave/requests/${requestId}/approve_hr/`, {});
+    return response.data;
+  } catch (error) {
+    console.error(`Error approving (HR) leave request ${requestId}:`, error.response?.data || error.message);
+    throw error;
+  }
 };
 
-// HR Reject
 export const rejectHrLeaveRequestAPI = async (requestId, reason) => {
-  // Use 'api' instance, remove manual headers
-  const response = await api.post(`/leave/requests/${requestId}/reject_hr/`, { reason });
-  return response.data;
+  try {
+    const response = await api.post(`/leave/requests/${requestId}/reject_hr/`, { reason });
+    return response.data;
+  } catch (error) {
+    console.error(`Error rejecting (HR) leave request ${requestId}:`, error.response?.data || error.message);
+    throw error;
+  }
 };
 
-// Employee Cancel
 export const cancelLeaveRequestAPI = async (requestId) => {
-  // Use 'api' instance, remove manual headers
-  const response = await api.post(`/leave/requests/${requestId}/cancel/`, {});
-  return response.data;
+  try {
+    // Backend must ensure only the employee who submitted or an admin can cancel
+    const response = await api.post(`/leave/requests/${requestId}/cancel/`, {});
+    return response.data;
+  } catch (error) {
+    console.error(`Error cancelling leave request ${requestId}:`, error.response?.data || error.message);
+    throw error;
+  }
 };
 
-// Update a leave request
 export const updateLeaveRequestAPI = async (requestId, updateData) => {
-    // Format dates if they are being updated
-    const dataToSend = { ...updateData }; // Start with all update data
+    // Backend must ensure only the employee who submitted (if pending) or admin can update
+    const dataToSend = { ...updateData };
     if (dataToSend.start_date) {
         dataToSend.start_date = formatDateForAPI(dataToSend.start_date);
     }
     if (dataToSend.end_date) {
         dataToSend.end_date = formatDateForAPI(dataToSend.end_date);
     }
-    // Remove fields that shouldn't be updated via PATCH if necessary
-    // delete dataToSend.employee;
+    // Remove fields that shouldn't be updated via PATCH if necessary (e.g., status changes via actions)
     // delete dataToSend.status;
 
-    // Use 'api' instance, remove manual headers
-    const response = await api.patch(`/leave/requests/${requestId}/`, dataToSend);
-    return response.data;
+    console.log(`Updating leave request ${requestId} with:`, dataToSend);
+
+    // Add validation for dates if they were provided in updateData
+    if (updateData.start_date && !dataToSend.start_date) {
+         throw new Error("Invalid start date format for update.");
+    }
+     if (updateData.end_date && !dataToSend.end_date) {
+        throw new Error("Invalid end date format for update.");
+    }
+
+    try {
+        const response = await api.patch(`/leave/requests/${requestId}/`, dataToSend);
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating leave request ${requestId}:`, error.response?.data || error.message);
+        throw error;
+    }
 };
+
+// Optional: Add a function to fetch leave types if needed for the form
+export const fetchLeaveTypesAPI = async () => {
+    try {
+        // Assuming an endpoint like /leave/types/ exists
+        const response = await api.get('/leave/types/'); // Adjust endpoint if needed
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching leave types:", error.response?.data || error.message);
+        throw error;
+    }
+}

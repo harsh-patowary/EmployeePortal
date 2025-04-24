@@ -19,15 +19,23 @@ class IsRequestOwner(permissions.BasePermission):
 
 class IsRequestManager(permissions.BasePermission):
     """
-    Custom permission to only allow the direct manager of the employee
-    who submitted the request to perform manager actions.
+    Allows access only to the manager of the employee who made the request.
+    Works hierarchically (Manager, Admin, Director).
     """
-    message = "You must be the direct manager of the employee to perform this action."
+    message = "You are not the manager responsible for this leave request."
 
     def has_object_permission(self, request, view, obj):
-        manager_employee = getattr(request.user, 'employee', None)
-        # Check if the user is an employee and if they are the manager of the request's employee
-        return manager_employee and obj.employee.manager == manager_employee
+        # obj is the LeaveRequest instance
+        if not request.user or not hasattr(request.user, 'employee'):
+            return False # Not logged in or no employee profile
+
+        requesting_employee_profile = request.user.employee
+        leave_request_employee = obj.employee # Employee who submitted the request
+
+        # Check if the logged-in user's employee profile is the manager
+        # of the employee who submitted the leave request.
+        # Ensure the manager field exists and is populated correctly.
+        return leave_request_employee.manager == requesting_employee_profile
 
 class IsHR(permissions.BasePermission):
     """

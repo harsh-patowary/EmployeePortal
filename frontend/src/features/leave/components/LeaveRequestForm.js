@@ -16,11 +16,12 @@ import {
   FormHelperText,
   Typography,
   Box,
+  Alert,
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { differenceInDays, isValid, startOfDay } from 'date-fns';
-import { createLeaveRequest, selectLeaveActionLoading, selectLeaveActionError } from '../slices/leaveSlice'; // Adjust path as needed
+import { createLeaveRequest, selectLeaveActionLoading, selectLeaveActionError, resetLeaveActionStatus } from '../slices/leaveSlice'; // Added resetLeaveActionStatus
 import { selectUser } from '../../../redux/employeeSlice'; // Adjust path as needed
 
 const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
@@ -40,15 +41,24 @@ const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
   const [duration, setDuration] = useState(0);
   const [balanceInfo, setBalanceInfo] = useState('');
 
+  // Reset form and redux error state when dialog opens/closes
   useEffect(() => {
-    // Reset form and errors when dialog opens/closes
     if (open) {
       setFormData(initialFormData);
       setFormErrors({});
       setDuration(0);
       setBalanceInfo('');
+      // Clear any previous action states
+      dispatch(resetLeaveActionStatus());
     }
-  }, [open]);
+    
+    // Clean up when dialog closes or component unmounts
+    return () => {
+      if (!open) {
+        dispatch(resetLeaveActionStatus());
+      }
+    };
+  }, [open, dispatch]);
 
   useEffect(() => {
     // Calculate duration when dates change
@@ -69,7 +79,17 @@ const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
         setBalanceInfo('');
     }
 
-  }, [formData.start_date, formData.end_date, formData.leave_type, paidBalance, sickBalance]);
+    // Clear any related errors when dependencies change
+    if (formErrors.leave_type || formErrors.start_date || formErrors.end_date) {
+      setFormErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors.leave_type;
+        delete newErrors.start_date;
+        delete newErrors.end_date;
+        return newErrors;
+      });
+    }
+  }, [formData.start_date, formData.end_date, formData.leave_type, paidBalance, sickBalance, formErrors]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,7 +97,7 @@ const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: null }));
     }
-     if (formErrors.form) {
+    if (formErrors.form) {
       setFormErrors((prev) => ({ ...prev, form: null }));
     }
   };
@@ -85,10 +105,10 @@ const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
   const handleDateChange = (name, date) => {
     const valueToSet = date && isValid(date) ? startOfDay(date) : null;
     setFormData((prev) => ({ ...prev, [name]: valueToSet }));
-     if (formErrors[name]) {
+    if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: null }));
     }
-     if (formErrors.form) {
+    if (formErrors.form) {
       setFormErrors((prev) => ({ ...prev, form: null }));
     }
   };
@@ -104,14 +124,13 @@ const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
     if (!formData.reason) tempErrors.reason = 'Reason is required.';
     if (duration <= 0) tempErrors.end_date = 'Please select valid start and end dates.';
 
-    // Balance Check (optional but good practice)
+    // Enforce strict balance validation - prevent submitting if balance is insufficient
     if (formData.leave_type === 'paid' && duration > (paidBalance ?? 0)) {
-        tempErrors.leave_type = `Insufficient paid leave balance (${paidBalance ?? 0} days available).`;
+        tempErrors.leave_type = `Insufficient paid leave balance (${paidBalance ?? 0} days available for ${duration} days requested).`;
     }
     if (formData.leave_type === 'sick' && duration > (sickBalance ?? 0)) {
-        tempErrors.leave_type = `Insufficient sick leave balance (${sickBalance ?? 0} days available).`;
+        tempErrors.leave_type = `Insufficient sick leave balance (${sickBalance ?? 0} days available for ${duration} days requested).`;
     }
-
 
     setFormErrors(tempErrors);
     return Object.keys(tempErrors).length === 0;
@@ -119,38 +138,50 @@ const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // First reset any previous action states
+    dispatch(resetLeaveActionStatus());
+    
     if (!validateForm()) return;
 
+    // Check if user object exists and has an ID
+    if (!user || !user.id) {
+      setFormErrors(prev => ({ 
+        ...prev, 
+        form: 'User information is missing. Please try logging in again.'
+      }));
+      return;
+    }
+
     // Pass the data closer to its original form (with Date objects)
-    // Let the service layer handle final formatting and field selection
     const dataToDispatch = {
       leave_type: formData.leave_type,
-      start_date: formData.start_date, // Pass the Date object
-      end_date: formData.end_date,     // Pass the Date object
+      start_date: formData.start_date,
+      end_date: formData.end_date,
       reason: formData.reason,
-      employee: user?.id, // Assuming user object has the employee ID
+      employee: user.id,
     };
 
-    // --- DEBUGGING: Log the data being dispatched from Form to Thunk ---
-    console.log("Data being dispatched from Form:", dataToDispatch);
-
     try {
-      // Dispatch the data with Date objects
+      // Dispatch the action with error handling
       const resultAction = await dispatch(createLeaveRequest(dataToDispatch));
 
       if (createLeaveRequest.fulfilled.match(resultAction)) {
         onClose(); // Close dialog on success
-      } else {
-         // Error handling remains the same
+      } else if (createLeaveRequest.rejected.match(resultAction)) {
+         // Handle specific error case
          if (resultAction.payload) {
              setFormErrors(prev => ({ ...prev, form: resultAction.payload.detail || resultAction.payload.reason || 'Failed to submit request.' }));
          } else {
              setFormErrors(prev => ({ ...prev, form: 'An unknown error occurred.' }));
          }
+         // Reset action loading state after error
+         setTimeout(() => dispatch(resetLeaveActionStatus()), 500);
       }
     } catch (err) {
       console.error("Submit error:", err);
       setFormErrors(prev => ({ ...prev, form: 'Failed to submit request. Please try again.' }));
+      dispatch(resetLeaveActionStatus());
     }
   };
 
@@ -160,6 +191,22 @@ const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
       <DialogContent>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <Grid container spacing={3} sx={{ mt: 1 }}>
+            {/* Show balance warning if needed */}
+            {formData.leave_type === 'paid' && paidBalance < duration && duration > 0 && (
+              <Grid item xs={12}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  Warning: Requested leave ({duration} days) exceeds your available paid leave balance ({paidBalance ?? 0} days).
+                </Alert>
+              </Grid>
+            )}
+            {formData.leave_type === 'sick' && sickBalance < duration && duration > 0 && (
+              <Grid item xs={12}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  Warning: Requested leave ({duration} days) exceeds your available sick leave balance ({sickBalance ?? 0} days).
+                </Alert>
+              </Grid>
+            )}
+            
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth error={!!formErrors.leave_type}>
                 <InputLabel id="leave-type-label">Leave Type</InputLabel>
@@ -176,7 +223,7 @@ const LeaveRequestForm = ({ open, onClose, paidBalance, sickBalance }) => {
                   {/* Add other types as needed */}
                 </Select>
                 {balanceInfo && <FormHelperText sx={{ ml: 0 }}>{balanceInfo}</FormHelperText>}
-                {formErrors.leave_type && <FormHelperText>{formErrors.leave_type}</FormHelperText>}
+                {formErrors.leave_type && <FormHelperText error>{formErrors.leave_type}</FormHelperText>}
               </FormControl>
             </Grid>
              <Grid item xs={12} sm={6}>

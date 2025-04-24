@@ -1,6 +1,13 @@
-import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'; // Import createSelector
 import {
-  fetchLeaveRequestsAPI,
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+} from "@reduxjs/toolkit";
+import api from "../../../utils/api"; // Keep this if needed for other direct calls
+import {
+  fetchMyLeaveRequestsAPI, // <-- Use specific API functions
+  fetchPendingApprovalsAPI, // <-- Use specific API functions
+  fetchAllLeaveRequestsAPI, // <-- Use specific API functions
   createLeaveRequestAPI,
   approveManagerLeaveRequestAPI,
   rejectManagerLeaveRequestAPI,
@@ -8,340 +15,552 @@ import {
   rejectHrLeaveRequestAPI,
   cancelLeaveRequestAPI,
   updateLeaveRequestAPI,
-  // fetchLeaveRequestDetailsAPI // Import if needed later
-} from '../services/leaveService';
+  fetchLeaveRequestDetailsAPI, // <-- Make sure this is imported
+} from "../services/leaveService";
 
 // --- Async Thunks ---
 
-export const fetchLeaveRequests = createAsyncThunk(
-  'leave/fetchLeaveRequests',
+export const fetchMyLeaveRequests = createAsyncThunk(
+  "leave/fetchMyLeaveRequests", // Specific action type
   async (_, { rejectWithValue }) => {
     try {
-      const data = await fetchLeaveRequestsAPI();
+      const data = await fetchMyLeaveRequestsAPI(); // Call specific service function
+      console.log("Fetched My Leave Requests:", data);
       return data;
     } catch (error) {
-      console.error("fetchLeaveRequests Error:", error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || 'Failed to fetch leave requests');
+      console.error(
+        "fetchMyLeaveRequests Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to fetch my leave requests"
+      );
+    }
+  }
+);
+
+export const fetchPendingApprovals = createAsyncThunk(
+  "leave/fetchPendingApprovals", // Specific action type
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await fetchPendingApprovalsAPI(); // Call specific service function
+      console.log("Fetched Pending Approvals:", data);
+      return data;
+    } catch (error) {
+      console.error(
+        "fetchPendingApprovals Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to fetch pending approvals"
+      );
+    }
+  }
+);
+
+export const fetchAllLeaveRequests = createAsyncThunk(
+  "leave/fetchAllLeaveRequests", // Specific action type
+  async (filters = {}, { rejectWithValue }) => {
+    // Pass filters if needed
+    try {
+      const data = await fetchAllLeaveRequestsAPI(filters); // Call specific service function
+      console.log("Fetched All Leave Requests:", data);
+      return data;
+    } catch (error) {
+      console.error(
+        "fetchAllLeaveRequests Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to fetch all leave requests"
+      );
     }
   }
 );
 
 export const createLeaveRequest = createAsyncThunk(
-  'leave/createLeaveRequest',
+  "leave/createLeaveRequest",
   async (requestData, { rejectWithValue }) => {
     try {
       const data = await createLeaveRequestAPI(requestData);
       return data;
     } catch (error) {
-      console.error("createLeaveRequest Error:", error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || 'Failed to create leave request');
+      console.error(
+        "createLeaveRequest Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to create leave request"
+      );
     }
   }
 );
 
 export const updateLeaveRequest = createAsyncThunk(
-    'leave/updateLeaveRequest',
-    async ({ requestId, updateData }, { rejectWithValue }) => {
-        try {
-            const data = await updateLeaveRequestAPI(requestId, updateData);
-            return data;
-        } catch (error) {
-            console.error("updateLeaveRequest Error:", error.response?.data || error.message);
-            return rejectWithValue(error.response?.data || 'Failed to update leave request');
-        }
+  "leave/updateLeaveRequest",
+  async ({ requestId, updateData }, { rejectWithValue }) => {
+    try {
+      const data = await updateLeaveRequestAPI(requestId, updateData);
+      return data;
+    } catch (error) {
+      console.error(
+        "updateLeaveRequest Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to update leave request"
+      );
     }
+  }
 );
 
 export const approveManagerLeaveRequest = createAsyncThunk(
-  'leave/approveManagerLeaveRequest',
+  "leave/approveManagerLeaveRequest",
   async (requestId, { rejectWithValue }) => {
     try {
       const data = await approveManagerLeaveRequestAPI(requestId);
       return data;
     } catch (error) {
-      console.error("approveManagerLeaveRequest Error:", error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || 'Failed to approve request (Manager)');
+      console.error(
+        "approveManagerLeaveRequest Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to approve request (Manager)"
+      );
     }
   }
 );
 
 export const rejectManagerLeaveRequest = createAsyncThunk(
-  'leave/rejectManagerLeaveRequest',
+  "leave/rejectManagerLeaveRequest",
   async ({ requestId, reason }, { rejectWithValue }) => {
     try {
       const data = await rejectManagerLeaveRequestAPI(requestId, reason);
       return data;
     } catch (error) {
-      console.error("rejectManagerLeaveRequest Error:", error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || 'Failed to reject request (Manager)');
+      console.error(
+        "rejectManagerLeaveRequest Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to reject request (Manager)"
+      );
     }
   }
 );
 
 export const approveHrLeaveRequest = createAsyncThunk(
-  'leave/approveHrLeaveRequest',
+  "leave/approveHrLeaveRequest",
   async (requestId, { rejectWithValue }) => {
     try {
       const data = await approveHrLeaveRequestAPI(requestId);
       return data; // This response should include the updated request AND potentially the updated employee balance
     } catch (error) {
-      console.error("approveHrLeaveRequest Error:", error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || 'Failed to approve request (HR)');
+      console.error(
+        "approveHrLeaveRequest Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to approve request (HR)"
+      );
     }
   }
 );
 
 export const rejectHrLeaveRequest = createAsyncThunk(
-  'leave/rejectHrLeaveRequest',
+  "leave/rejectHrLeaveRequest",
   async ({ requestId, reason }, { rejectWithValue }) => {
     try {
       const data = await rejectHrLeaveRequestAPI(requestId, reason);
       return data;
     } catch (error) {
-      console.error("rejectHrLeaveRequest Error:", error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || 'Failed to reject request (HR)');
+      console.error(
+        "rejectHrLeaveRequest Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to reject request (HR)"
+      );
     }
   }
 );
 
 export const cancelLeaveRequest = createAsyncThunk(
-  'leave/cancelLeaveRequest',
+  "leave/cancelLeaveRequest",
   async (requestId, { rejectWithValue }) => {
     try {
       const data = await cancelLeaveRequestAPI(requestId);
       return data;
     } catch (error) {
-      console.error("cancelLeaveRequest Error:", error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || 'Failed to cancel request');
+      console.error(
+        "cancelLeaveRequest Error:",
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data || "Failed to cancel request"
+      );
     }
   }
 );
 
-
-// --- Slice Definition ---
+export const fetchLeaveRequestDetails = createAsyncThunk(
+  "leave/fetchLeaveRequestDetails",
+  async (requestId, { rejectWithValue }) => {
+    try {
+      const data = await fetchLeaveRequestDetailsAPI(requestId);
+      return data; // Payload will be the single request object
+    } catch (error) {
+      console.error(
+        `fetchLeaveRequestDetails Error for ${requestId}:`,
+        error.response?.data || error.message
+      );
+      return rejectWithValue(
+        error.response?.data ||
+          `Failed to fetch details for request ${requestId}`
+      );
+    }
+  }
+);
 
 const initialState = {
-  requests: [],
-  loading: 'idle', // 'idle' | 'pending' | 'succeeded' | 'failed'
+  // Separate lists might be clearer than one potentially large 'requests' list
+  myRequests: [],
+  pendingApprovals: [],
+  allRequests: [], // For admin/HR view
+  loading: "idle", // Consider separate loading states: loadingMy, loadingPending, loadingAll
   error: null,
-  // Add specific loading states for actions if needed (e.g., creating, approving)
-  actionLoading: 'idle',
+  actionLoading: "idle",
   actionError: null,
+  detailLoading: "idle", // Separate loading for fetching single request details
+  detailError: null,
+  currentRequestDetails: null, // To store the fetched details
 };
 
 const leaveSlice = createSlice({
-  name: 'leave',
+  name: "leave",
   initialState,
   reducers: {
-    // Can add reducers for synchronous actions if needed
     resetLeaveActionStatus: (state) => {
-        state.actionLoading = 'idle';
-        state.actionError = null;
-    }
+      state.actionLoading = "idle";
+      state.actionError = null;
+    },
+    // Reducer to clear specific lists if needed on logout/role change
+    clearLeaveLists: (state) => {
+      state.myRequests = [];
+      state.pendingApprovals = [];
+      state.allRequests = [];
+      state.loading = "idle";
+      state.error = null;
+    },
+    // Add reducer to clear details when dialog closes? Optional but good practice.
+    clearCurrentRequestDetails: (state) => {
+      state.currentRequestDetails = null;
+      state.detailLoading = "idle";
+      state.detailError = null;
+    },
   },
   extraReducers: (builder) => {
     builder
-      // Fetch Leave Requests
-      .addCase(fetchLeaveRequests.pending, (state) => {
-        state.loading = 'pending';
+      // Fetch My Requests
+      .addCase(fetchMyLeaveRequests.pending, (state) => {
+        state.loading = "pending";
+      }) // Adjust loading state if needed
+      .addCase(fetchMyLeaveRequests.fulfilled, (state, action) => {
+        state.loading = "succeeded";
+        state.myRequests = action.payload;
         state.error = null;
       })
-      .addCase(fetchLeaveRequests.fulfilled, (state, action) => {
-        state.loading = 'succeeded';
-        state.requests = action.payload;
-      })
-      .addCase(fetchLeaveRequests.rejected, (state, action) => {
-        state.loading = 'failed';
+      .addCase(fetchMyLeaveRequests.rejected, (state, action) => {
+        state.loading = "failed";
         state.error = action.payload;
       })
 
-      // Create Leave Request
+      // Fetch Pending Approvals
+      .addCase(fetchPendingApprovals.pending, (state) => {
+        state.loading = "pending";
+      }) // Adjust loading state if needed
+      .addCase(fetchPendingApprovals.fulfilled, (state, action) => {
+        state.loading = "succeeded";
+        state.pendingApprovals = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchPendingApprovals.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = action.payload;
+      })
+
+      // Fetch All Requests
+      .addCase(fetchAllLeaveRequests.pending, (state) => {
+        state.loading = "pending";
+      }) // Adjust loading state if needed
+      .addCase(fetchAllLeaveRequests.fulfilled, (state, action) => {
+        state.loading = "succeeded";
+        state.allRequests = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchAllLeaveRequests.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = action.payload;
+      })
+
+      // --- Handle Fetching Request Details ---
+      .addCase(fetchLeaveRequestDetails.pending, (state) => {
+        state.detailLoading = "pending";
+        state.currentRequestDetails = null; // Clear previous details
+        state.detailError = null;
+      })
+      .addCase(fetchLeaveRequestDetails.fulfilled, (state, action) => {
+        state.detailLoading = "succeeded";
+        state.currentRequestDetails = action.payload;
+      })
+      .addCase(fetchLeaveRequestDetails.rejected, (state, action) => {
+        state.detailLoading = "failed";
+        state.detailError = action.payload;
+      })
+
+      // --- Handle Action Updates (Create, Approve, Reject, Cancel, Update) ---
+      // These need to potentially update MULTIPLE lists in the state
+
       .addCase(createLeaveRequest.pending, (state) => {
-        state.actionLoading = 'pending';
+        state.actionLoading = "pending";
         state.actionError = null;
       })
       .addCase(createLeaveRequest.fulfilled, (state, action) => {
-        state.actionLoading = 'succeeded';
-        state.requests.unshift(action.payload); // Add to the beginning of the list
-      })
-      .addCase(createLeaveRequest.rejected, (state, action) => {
-        state.actionLoading = 'failed';
-        state.actionError = action.payload;
+        state.actionLoading = "succeeded";
+        state.myRequests.unshift(action.payload); // Add to my requests
+        // Does it appear in someone else's pending list immediately? If so, fetch? Or wait for their next fetch?
+        // Simpler: just update the list relevant to the creator for now.
       })
 
-      // Update Leave Request (Generic PATCH)
-      .addCase(updateLeaveRequest.pending, (state) => {
-          state.actionLoading = 'pending';
-          state.actionError = null;
-      })
-      .addCase(updateLeaveRequest.fulfilled, (state, action) => {
-          state.actionLoading = 'succeeded';
-          const index = state.requests.findIndex(req => req.id === action.payload.id);
-          if (index !== -1) {
-              state.requests[index] = action.payload;
-          }
-      })
-      .addCase(updateLeaveRequest.rejected, (state, action) => {
-          state.actionLoading = 'failed';
-          state.actionError = action.payload;
-      })
-
-      // Approve Manager
       .addCase(approveManagerLeaveRequest.pending, (state) => {
-        state.actionLoading = 'pending';
+        state.actionLoading = "pending";
         state.actionError = null;
       })
       .addCase(approveManagerLeaveRequest.fulfilled, (state, action) => {
-        state.actionLoading = 'succeeded';
-        const index = state.requests.findIndex(req => req.id === action.payload.id);
-        if (index !== -1) {
-          state.requests[index] = action.payload; // Update the request in the list
+        state.actionLoading = "succeeded";
+        // Remove from pendingApprovals list
+        state.pendingApprovals = state.pendingApprovals.filter(
+          (req) => req.id !== action.payload.id
+        );
+        // Update in myRequests list if the approver is viewing their own requests? Unlikely.
+        // Update in allRequests list if loaded
+        const allIndex = state.allRequests.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (allIndex !== -1) state.allRequests[allIndex] = action.payload;
+        // Update details if the currently viewed request was approved
+        if (state.currentRequestDetails?.id === action.payload.id) {
+          state.currentRequestDetails = action.payload;
         }
-      })
-      .addCase(approveManagerLeaveRequest.rejected, (state, action) => {
-        state.actionLoading = 'failed';
-        state.actionError = action.payload;
+        // The request might now appear in HR's pending list on their next fetch.
       })
 
-      // Reject Manager
       .addCase(rejectManagerLeaveRequest.pending, (state) => {
-        state.actionLoading = 'pending';
+        state.actionLoading = "pending";
         state.actionError = null;
       })
       .addCase(rejectManagerLeaveRequest.fulfilled, (state, action) => {
-        state.actionLoading = 'succeeded';
-        const index = state.requests.findIndex(req => req.id === action.payload.id);
-        if (index !== -1) {
-          state.requests[index] = action.payload;
+        state.actionLoading = "succeeded";
+        // Remove from pendingApprovals list
+        state.pendingApprovals = state.pendingApprovals.filter(
+          (req) => req.id !== action.payload.id
+        );
+        // Update in allRequests list if loaded
+        const allIndex = state.allRequests.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (allIndex !== -1) state.allRequests[allIndex] = action.payload;
+        // Update details if the currently viewed request was rejected
+        if (state.currentRequestDetails?.id === action.payload.id) {
+          state.currentRequestDetails = action.payload;
         }
-      })
-      .addCase(rejectManagerLeaveRequest.rejected, (state, action) => {
-        state.actionLoading = 'failed';
-        state.actionError = action.payload;
+        // Update in the requester's myRequests list on their next fetch.
       })
 
-      // Approve HR
       .addCase(approveHrLeaveRequest.pending, (state) => {
-        state.actionLoading = 'pending';
+        state.actionLoading = "pending";
         state.actionError = null;
       })
       .addCase(approveHrLeaveRequest.fulfilled, (state, action) => {
-        state.actionLoading = 'succeeded';
-        const index = state.requests.findIndex(req => req.id === action.payload.id);
-        if (index !== -1) {
-          state.requests[index] = action.payload;
-          // NOTE: Balance update happens on the backend. The employeeSlice
-          // might need to re-fetch user details or have a dedicated balance update reducer
-          // if the API response for HR approval doesn't include the updated employee details.
-          // For now, we assume the request object is updated correctly.
+        console.log(
+          "Reducer: approveHrLEaveRequest.fulfilled reached",
+          action.payload
+        );
+        state.actionLoading = "succeeded";
+        // Remove from pendingApprovals list (if HR was viewing that)
+        state.pendingApprovals = state.pendingApprovals.filter(
+          (req) => req.id !== action.payload.id
+        );
+        // Update in allRequests list if loaded
+        const allIndex = state.allRequests.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (allIndex !== -1) state.allRequests[allIndex] = action.payload;
+        // Update details if the currently viewed request was approved
+        if (state.currentRequestDetails?.id === action.payload.id) {
+          state.currentRequestDetails = action.payload;
         }
-      })
-      .addCase(approveHrLeaveRequest.rejected, (state, action) => {
-        state.actionLoading = 'failed';
-        state.actionError = action.payload;
+        // Update in the requester's myRequests list on their next fetch.
       })
 
-      // Reject HR
       .addCase(rejectHrLeaveRequest.pending, (state) => {
-        state.actionLoading = 'pending';
+        state.actionLoading = "pending";
         state.actionError = null;
       })
       .addCase(rejectHrLeaveRequest.fulfilled, (state, action) => {
-        state.actionLoading = 'succeeded';
-        const index = state.requests.findIndex(req => req.id === action.payload.id);
-        if (index !== -1) {
-          state.requests[index] = action.payload;
+        state.actionLoading = "succeeded";
+        // Remove from pendingApprovals list (if HR was viewing that)
+        state.pendingApprovals = state.pendingApprovals.filter(
+          (req) => req.id !== action.payload.id
+        );
+        // Update in allRequests list if loaded
+        const allIndex = state.allRequests.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (allIndex !== -1) state.allRequests[allIndex] = action.payload;
+        // Update details if the currently viewed request was rejected
+        if (state.currentRequestDetails?.id === action.payload.id) {
+          state.currentRequestDetails = action.payload;
         }
-      })
-      .addCase(rejectHrLeaveRequest.rejected, (state, action) => {
-        state.actionLoading = 'failed';
-        state.actionError = action.payload;
+        // Update in the requester's myRequests list on their next fetch.
       })
 
-      // Cancel Leave Request
       .addCase(cancelLeaveRequest.pending, (state) => {
-        state.actionLoading = 'pending';
+        state.actionLoading = "pending";
         state.actionError = null;
       })
       .addCase(cancelLeaveRequest.fulfilled, (state, action) => {
-        state.actionLoading = 'succeeded';
-        const index = state.requests.findIndex(req => req.id === action.payload.id);
-        if (index !== -1) {
-          state.requests[index] = action.payload;
+        state.actionLoading = "succeeded";
+        // Update in myRequests list
+        const myIndex = state.myRequests.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (myIndex !== -1) state.myRequests[myIndex] = action.payload;
+        // Remove from pendingApprovals list if it was there
+        state.pendingApprovals = state.pendingApprovals.filter(
+          (req) => req.id !== action.payload.id
+        );
+        // Update in allRequests list if loaded
+        const allIndex = state.allRequests.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (allIndex !== -1) state.allRequests[allIndex] = action.payload;
+        // Update details if the currently viewed request was canceled
+        if (state.currentRequestDetails?.id === action.payload.id) {
+          state.currentRequestDetails = action.payload;
         }
       })
-      .addCase(cancelLeaveRequest.rejected, (state, action) => {
-        state.actionLoading = 'failed';
-        state.actionError = action.payload;
-      });
+
+      .addCase(updateLeaveRequest.pending, (state) => {
+        state.actionLoading = "pending";
+        state.actionError = null;
+      })
+      .addCase(updateLeaveRequest.fulfilled, (state, action) => {
+        state.actionLoading = "succeeded";
+        // Update in myRequests list
+        const myIndex = state.myRequests.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (myIndex !== -1) state.myRequests[myIndex] = action.payload;
+        // Update in pendingApprovals list if it was there (e.g. reason updated)
+        const pendingIndex = state.pendingApprovals.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (pendingIndex !== -1)
+          state.pendingApprovals[pendingIndex] = action.payload;
+        // Update in allRequests list if loaded
+        const allIndex = state.allRequests.findIndex(
+          (req) => req.id === action.payload.id
+        );
+        if (allIndex !== -1) state.allRequests[allIndex] = action.payload;
+        // Update details if the currently viewed request was updated
+        if (state.currentRequestDetails?.id === action.payload.id) {
+          state.currentRequestDetails = action.payload;
+        }
+      })
+
+      // Add pending/rejected cases for all actions to handle loading/error states
+      // .addMatcher(
+      //   (action) =>
+      //     action.type.startsWith("leave/") &&
+      //     action.type.endsWith("/pending") &&
+      //     !action.type.endsWith("leave/fetch"),
+      //   (state) => {
+      //     state.actionLoading = "pending";
+      //     state.actionError = null;
+      //   }
+      // )
+      .addMatcher(
+        (action) =>
+          action.type.startsWith("leave/") && action.type.endsWith("/rejected"),
+        (state, action) => {
+          // Exclude fetch rejections from actionError
+          if (!action.type.startsWith("leave/fetch")) {
+            state.actionLoading = "failed";
+            state.actionError = action.payload;
+          }
+        }
+      );
   },
 });
 
 // --- Selectors ---
-export const selectLeaveState = (state) => state.leave; // Base selector for the slice
+export const selectLeaveState = (state) => state.leave;
 
-export const selectAllLeaveRequests = createSelector(
+// Selectors for the specific lists
+export const selectMyLeaveRequests = createSelector(
   [selectLeaveState],
-  (leave) => leave.requests
+  (leave) => leave.myRequests
 );
+export const selectPendingApprovalRequests = createSelector(
+  [selectLeaveState],
+  (leave) => leave.pendingApprovals
+);
+export const selectAllLeaveRequestsForAdmin = createSelector(
+  [selectLeaveState],
+  (leave) => leave.allRequests
+); // Renamed for clarity
 
 export const selectLeaveLoading = createSelector(
   [selectLeaveState],
   (leave) => leave.loading
-);
-
+); // Or specific loading states
 export const selectLeaveError = createSelector(
   [selectLeaveState],
   (leave) => leave.error
 );
-
 export const selectLeaveActionLoading = createSelector(
   [selectLeaveState],
   (leave) => leave.actionLoading
 );
-
 export const selectLeaveActionError = createSelector(
   [selectLeaveState],
   (leave) => leave.actionError
 );
-
-// Selector for requests pending manager approval (for managers) - MEMOIZED
-export const selectPendingManagerApprovalRequests = createSelector(
-  [selectAllLeaveRequests], // Input selector
-  (requests) => requests.filter(req => req.status === 'pending') // Result function
+export const selectCurrentRequestDetails = createSelector(
+  [selectLeaveState],
+  (leave) => leave.currentRequestDetails
+);
+export const selectDetailLoading = createSelector(
+  [selectLeaveState],
+  (leave) => leave.detailLoading
+);
+export const selectDetailError = createSelector(
+  [selectLeaveState],
+  (leave) => leave.detailError
 );
 
-// Selector for requests pending HR approval (for HR/Admin) - MEMOIZED
-export const selectPendingHrApprovalRequests = createSelector(
-  [selectAllLeaveRequests], // Input selector
-  (requests) => requests.filter(req => req.status === 'manager_approved') // Result function
-);
+// Example: If you still need combined lists in some components, create selectors for that
+// export const selectCombinedPendingRequests = createSelector(
+//     [selectPendingManagerApprovalRequests, selectPendingHrApprovalRequests],
+//     (managerPending, hrPending) => [...managerPending, ...hrPending]
+// );
 
-// Selector for the current user's own requests - MEMOIZED
-export const selectMyLeaveRequests = createSelector(
-    [selectAllLeaveRequests, (state) => state.employee.user?.id], // Input selectors: all requests and user ID
-    (requests, userId) => {
-        if (!userId) return [];
-        // Ensure you are comparing the correct ID field. Assuming employee_details.id based on other code.
-        return requests.filter(req => req.employee_details?.id === userId);
-    }
-);
-
-
-export const { resetLeaveActionStatus } = leaveSlice.actions;
+export const {
+  resetLeaveActionStatus,
+  clearLeaveLists,
+  clearCurrentRequestDetails,
+} = leaveSlice.actions;
 
 export default leaveSlice.reducer;
-
-// --- Make sure employeeSlice selectors are also defined correctly ---
-// Example (assuming these are in employeeSlice.js):
-/*
-export const selectUser = (state) => state.employee.user;
-export const selectPaidLeaveBalance = createSelector(
-    [selectUser],
-    (user) => user?.paid_leave_balance ?? 0 // Provide default
-);
-export const selectSickLeaveBalance = createSelector(
-    [selectUser],
-    (user) => user?.sick_leave_balance ?? 0 // Provide default
-);
-*/

@@ -5,21 +5,20 @@ import {
   Box,
   Typography,
   Paper,
-  Grid,
   Button,
   CircularProgress,
   Alert,
   useTheme,
   useMediaQuery,
-  Tabs, // Import Tabs
-  Tab, // Import Tab
+  Tabs,
+  Tab,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import {
-  fetchLeaveRequests,
+  fetchMyLeaveRequests,
+  fetchPendingApprovals,
   selectMyLeaveRequests,
-  selectPendingManagerApprovalRequests,
-  selectPendingHrApprovalRequests,
+  selectPendingApprovalRequests,
   selectLeaveLoading,
   selectLeaveError,
   resetLeaveActionStatus,
@@ -30,14 +29,15 @@ import {
   selectUser,
   selectIsManager,
   selectRole,
-  selectPaidLeaveBalance, // Import balance selectors
+  selectPaidLeaveBalance,
   selectSickLeaveBalance,
+  fetchUserDetails
 } from "../../../redux/employeeSlice"; // Adjust path as needed
 import LeaveBalanceDisplay from "../components/LeaveBalanceDisplay";
 import LeaveRequestList from "../components/LeaveRequestList";
 import LeaveRequestForm from "../components/LeaveRequestForm";
-import LeaveRequestDetailDialog from "../components/LeaveRequestDetailDialog"; // Import the new dialog
-import ApprovalActionDialog from "../components/ApprovalActionDialog";
+import LeaveDetailDialog from "../components/LeaveRequestDetailDialog";
+import LeaveApprovalDialog from "../components/ApprovalActionDialog";
 import SnackbarAlert from "../../../components/SnackbarAlert"; // Assuming you have a Snackbar component
 
 function LeaveDashboardPage() {
@@ -50,8 +50,7 @@ function LeaveDashboardPage() {
   const isManager = useSelector(selectIsManager);
   const userRole = useSelector(selectRole);
   const myRequests = useSelector(selectMyLeaveRequests);
-  const managerPending = useSelector(selectPendingManagerApprovalRequests);
-  const hrPending = useSelector(selectPendingHrApprovalRequests);
+  const pendingApprovals = useSelector(selectPendingApprovalRequests);
   const loading = useSelector(selectLeaveLoading);
   const error = useSelector(selectLeaveError);
   const actionLoading = useSelector(selectLeaveActionLoading);
@@ -73,16 +72,47 @@ function LeaveDashboardPage() {
     severity: "info",
   });
   const [activeTab, setActiveTab] = useState(0); // 0: My Requests, 1: Approvals
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Track initial load state
 
   // Check if user has approval roles
   const canApproveManager = isManager; // Simple check, adjust if needed
   const canApproveHr = ["hr", "admin", "director"].includes(userRole);
   const showApprovalTab = canApproveManager || canApproveHr;
 
-  // Fetch data on mount
   useEffect(() => {
-    dispatch(fetchLeaveRequests());
+    dispatch(resetLeaveActionStatus)
   }, [dispatch]);
+
+  // Fetch data on mount and when dependencies change
+  useEffect(() => {
+    // Initial data load
+    const loadData = async () => {
+      // Fetch my requests first
+      await dispatch(fetchMyLeaveRequests());
+      
+      // Then fetch pending approvals if needed
+      if (showApprovalTab) {
+        await dispatch(fetchPendingApprovals());
+      }
+      
+      // Mark initial load complete
+      setIsInitialLoad(false);
+    };
+    
+    loadData();
+  }, [dispatch, showApprovalTab]);
+
+  // Effect for tab changes - refresh data when tab changes
+  useEffect(() => {
+    // Skip during initial load to prevent duplicate fetches
+    if (!isInitialLoad) {
+      if (activeTab === 0) {
+        dispatch(fetchMyLeaveRequests());
+      } else if (activeTab === 1 && showApprovalTab) {
+        dispatch(fetchPendingApprovals());
+      }
+    }
+  }, [activeTab, dispatch, showApprovalTab, isInitialLoad]);
 
   // Reset action status when component mounts or action completes
   useEffect(() => {
@@ -94,46 +124,98 @@ function LeaveDashboardPage() {
           message: "Action completed successfully!",
           severity: "success",
         });
+        
+        // Re-fetch data after successful action to update lists
+        if (activeTab === 0) {
+          dispatch(fetchMyLeaveRequests());
+        } else if (showApprovalTab) {
+          dispatch(fetchPendingApprovals());
+        }
+        
+        // Add this line to refresh user details including leave balances
+        dispatch(fetchUserDetails());
       } else if (actionError) {
         // Extract specific error message if available
-        const errorMessage =
-          typeof actionError === "string"
-            ? actionError
-            : actionError?.detail ||
-              actionError?.reason ||
-              "An error occurred.";
+        let errorMessage = "An error occurred."; // Default message
+
+        if (typeof actionError === "string") {
+          errorMessage = actionError;
+        } else if (typeof actionError === 'object' && actionError !== null) {
+            // Handle DRF ValidationError (often arrays or dicts)
+            if (Array.isArray(actionError) && actionError.length > 0 && typeof actionError[0] === 'string') {
+                errorMessage = actionError[0]; // Get first string error from array
+            } else if (actionError.detail) {
+                errorMessage = actionError.detail; // Standard DRF error
+            } else if (actionError.reason) {
+                errorMessage = actionError.reason; // Custom reason field?
+            } else if (actionError.non_field_errors && Array.isArray(actionError.non_field_errors) && actionError.non_field_errors.length > 0) {
+                errorMessage = actionError.non_field_errors[0]; // Common for non-field specific errors
+            } else {
+                // Try to find the first error message in a dictionary of field errors
+                const firstFieldErrorKey = Object.keys(actionError)[0];
+                if (firstFieldErrorKey && Array.isArray(actionError[firstFieldErrorKey]) && actionError[firstFieldErrorKey].length > 0) {
+                    errorMessage = actionError[firstFieldErrorKey][0];
+                } else {
+                    // Fallback if structure is unexpected
+                    try {
+                        errorMessage = JSON.stringify(actionError);
+                    } catch (e) { /* ignore stringify error */ }
+                }
+            }
+        }
+
         setSnackbar({
           open: true,
-          message: `Action failed: ${errorMessage}`,
+          message: `Action failed: ${errorMessage}`, // Use the extracted message
           severity: "error",
         });
       }
-      // Reset status after a short delay to allow snackbar to show
+      
+      // Reset status after a delay to allow snackbar to show
       const timer = setTimeout(() => {
         dispatch(resetLeaveActionStatus());
       }, 3000); // Adjust delay as needed
+      
       return () => clearTimeout(timer);
     }
-  }, [actionLoading, actionError, dispatch]);
+  }, [actionLoading, actionError, dispatch, showApprovalTab, activeTab]);
 
-  const handleOpenRequestForm = () => setOpenRequestForm(true);
-  const handleCloseRequestForm = () => setOpenRequestForm(false);
+  const handleOpenRequestForm = () => {
+    dispatch(resetLeaveActionStatus()); // Reset action status before opening form
+    setOpenRequestForm(true);
+  };
+  
+  const handleCloseRequestForm = () => {
+    setOpenRequestForm(false);
+    // Reset action state when closing the form
+    dispatch(resetLeaveActionStatus());
+    // Optional: refetch data after closing form in case changes were made
+    dispatch(fetchMyLeaveRequests());
+  };
 
   const handleOpenApprovalDialog = (request) => {
+    dispatch(resetLeaveActionStatus()); // Reset action status before opening dialog
     setSelectedRequestForAction(request);
     setOpenApprovalDialog(true);
   };
+  
   const handleCloseApprovalDialog = () => {
-    // Reset slice error state when closing dialog
-    dispatch(resetLeaveActionStatus());
     setSelectedRequestForAction(null);
     setOpenApprovalDialog(false);
+    
+    // Refetch appropriate data after closing dialog
+    if (activeTab === 0) {
+      dispatch(fetchMyLeaveRequests());
+    } else if (activeTab === 1 && showApprovalTab) {
+      dispatch(fetchPendingApprovals());
+    }
   };
 
   const handleOpenDetailDialog = (request) => {
     setSelectedRequestForDetail(request);
     setOpenDetailDialog(true);
   };
+  
   const handleCloseDetailDialog = () => {
     setSelectedRequestForDetail(null);
     setOpenDetailDialog(false);
@@ -151,14 +233,21 @@ function LeaveDashboardPage() {
   };
 
   // Determine which requests to show in the "Approvals" tab
-  const requestsForApproval = canApproveHr
-    ? hrPending
-    : canApproveManager
-    ? managerPending
-    : [];
+  const requestsForApproval = pendingApprovals;
 
+  // Refresh button handler
+  const handleRefreshData = () => {
+    if (activeTab === 0) {
+      dispatch(fetchMyLeaveRequests());
+    } else if (activeTab === 1 && showApprovalTab) {
+      dispatch(fetchPendingApprovals());
+    }
+  };
+
+  console.log("LeaveDashboardPage - actionLoading state:", actionLoading);
+  console.log("leave balances:", paidBalance, sickBalance);
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+    <Box sx={{ p: { xs: 1, sm: 2, md:3 } }}>
       <Box
         sx={{
           display: "flex",
@@ -174,21 +263,14 @@ function LeaveDashboardPage() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleOpenRequestForm}
+          
           disabled={actionLoading === "pending"}
         >
-          Apply for Leave
+          Apply
         </Button>
+        
       </Box>
 
-      {/* Loading and Error States */}
-      {loading === "pending" && (
-        <CircularProgress sx={{ display: "block", margin: "auto" }} />
-      )}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {typeof error === "string" ? error : "Failed to load leave data."}
-        </Alert>
-      )}
       {/* Leave Balances */}
       <LeaveBalanceDisplay paid={paidBalance} sick={sickBalance} />
 
@@ -207,12 +289,26 @@ function LeaveDashboardPage() {
         </Tabs>
 
         <Box sx={{ p: { xs: 1, sm: 2 } }}>
+          {/* Loading Indicator - Show only during active loading */}
+          {loading === "pending" && (
+            <Box sx={{ display: "flex", justifyContent: "center", my: 3 }}>
+              <CircularProgress />
+            </Box>
+          )}
+          
+          {/* Error Message */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {typeof error === "string" ? error : "Failed to load leave data."}
+            </Alert>
+          )}
+
           {/* My Requests Tab Content */}
-          {activeTab === 0 && (
+          {activeTab === 0 && loading !== "pending" && (
             <LeaveRequestList
               title="My Leave History"
               requests={myRequests}
-              loading={loading === "pending"}
+              loading={false}
               currentUserId={currentUser?.id}
               onCardClick={handleOpenDetailDialog} // Pass handler to open detail view
               // Pass handlers for cancel/edit if needed later
@@ -220,11 +316,11 @@ function LeaveDashboardPage() {
           )}
 
           {/* Approvals Tab Content */}
-          {activeTab === 1 && showApprovalTab && (
+          {activeTab === 1 && showApprovalTab && loading !== "pending" && (
             <LeaveRequestList
               title="Requests Awaiting My Approval"
               requests={requestsForApproval}
-              loading={loading === "pending"}
+              loading={false}
               currentUserId={currentUser?.id}
               // DO NOT pass onCardClick here
               onActionClick={handleOpenApprovalDialog} // Pass handler to open dialog
@@ -243,7 +339,7 @@ function LeaveDashboardPage() {
       />
 
       {selectedRequestForAction && (
-        <ApprovalActionDialog
+        <LeaveApprovalDialog
           open={openApprovalDialog}
           onClose={handleCloseApprovalDialog}
           request={selectedRequestForAction}
@@ -252,7 +348,7 @@ function LeaveDashboardPage() {
       )}
 
       {/* Detail Dialog */}
-      <LeaveRequestDetailDialog
+      <LeaveDetailDialog
         open={openDetailDialog}
         onClose={handleCloseDetailDialog}
         request={selectedRequestForDetail}

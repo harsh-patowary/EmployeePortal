@@ -74,20 +74,15 @@ const LeaveRequestList = ({
   isApprovalList = false, // Flag to show action buttons
   // Add onCancelClick, onEditClick if needed for 'My Requests' view
 }) => {
+  console.log(`LeaveRequestList (${title}) - Received Requests Prop:`, requests);
+  console.log(`LeaveRequestList (${title}) - Loading Prop:`, loading);
+
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
-      </Box>
-    );
+    return <CircularProgress sx={{ display: 'block', margin: '20px auto' }} />;
   }
 
   if (!requests || requests.length === 0) {
-    return (
-      <Box p={2}>
-        <Typography color="text.secondary">No leave requests found.</Typography>
-      </Box>
-    );
+    return <Typography sx={{ textAlign: 'center', p: 2 }}>No requests found.</Typography>;
   }
 
   return (
