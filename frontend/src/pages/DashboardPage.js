@@ -5,6 +5,7 @@ import UserDetailsComponent from "../components/UserComponent";
 import { selectUser } from "../redux/employeeSlice";
 import AttendanceSummaryWidget from "../features/attendance/components/AttendanceSummaryWidget";
 import LeaveDashboardWidget from "../features/leave/components/LeaveDashboardWidget";
+import NoticeDashboardWidget from "../features/notice/components/NoticeDashboardWidget"; // New widget import
 
 // Widget wrapper component for consistent styling
 const DashboardWidget = ({ children, title, elevation = 0, sx = {} }) => {
@@ -64,6 +65,11 @@ function DashboardPage() {
       id: 'leave',
       title: null, // Widget has its own title
       content: <LeaveDashboardWidget />
+    },
+    { // <-- Add the new widget configuration
+      id: 'notice',
+      title: null, // Widget has its own title
+      content: <NoticeDashboardWidget />
     }
     // Add new widgets here easily:
     // { id: 'tasks', title: 'Tasks', content: <TasksWidget /> }

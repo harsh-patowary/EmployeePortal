@@ -14,6 +14,7 @@ import TasksPage from './pages/TasksPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import LeaveDashboardPage from './features/leave/pages/LeaveDashboardPage'; // <-- Import Leave Page
+import NoticeDashboardPage from './features/notice/pages/NoticeDashboardPage'; 
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchUserDetails,
@@ -46,6 +47,10 @@ function App() {
   const loadingAllEmployees = useSelector(selectLoadingAllEmployees);
   const teamMembers = useSelector(selectTeamMembers);
   const allEmployees = useSelector(selectAllEmployees);
+
+  useEffect(() => {
+    document.title = "FDM Portal";
+  }, []);
 
   // Effect 1: Fetch User Details on initial load if token exists but not authenticated
   useEffect(() => {
@@ -120,6 +125,8 @@ function App() {
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="tasks" element={<TasksPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="notices" element={<NoticeDashboardPage />} /> {/* <-- ADD NOTICE ROUTE */}
+
 
             <Route 
               path="attendance" 
