@@ -3,16 +3,19 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import companyLogo from '../assets/logos/company-logo.svg';
 import { loginUser } from '../services/authService'; // Assuming authService handles login API call
-import { selectIsAuthenticated, selectError, fetchUserDetails } from '../redux/employeeSlice'; 
+import { selectIsAuthenticated, selectError, fetchUserDetails } from '../redux/employeeSlice';
 import {
-  Container, Box, TextField, Button, Typography, Alert, CircularProgress, Paper
+  Container, Box, TextField, Button, Typography, Alert, CircularProgress, Paper,
+  InputAdornment, IconButton // Import InputAdornment and IconButton
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material'; // Import icons
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -35,21 +38,33 @@ const LoginPage = () => {
 
     try {
       const loginData = await loginUser(username, password);
-      
+
       if (loginData) {
          await dispatch(fetchUserDetails()).unwrap();
          navigate(from, { replace: true });
       } else {
-         setLocalError('Login failed. Please check credentials.'); 
+         setLocalError('Login failed. Please check credentials.');
       }
 
     } catch (err) {
       console.error("Login error:", err);
-      setLocalError(err.message || 'Login failed. Please check credentials.');
+      // Check if the error object has a response and data with details
+      const errorMessage = err.response?.data?.detail || err.message || 'Login failed. Please check credentials.';
+      setLocalError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  // Toggle password visibility
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleMouseDownPassword = (event) => {
+    event.preventDefault(); // Prevent blur on click
+  };
+
 
   return (
     <Box
@@ -118,11 +133,25 @@ const LoginPage = () => {
                fullWidth
                name="password"
                label="Password"
-               type="password"
+               type={showPassword ? 'text' : 'password'} // Toggle type based on state
                id="password"
                autoComplete="current-password"
                value={password}
                onChange={(e) => setPassword(e.target.value)}
+               InputProps={{ // Add InputProps to include the adornment
+                 endAdornment: (
+                   <InputAdornment position="end">
+                     <IconButton
+                       aria-label="toggle password visibility"
+                       onClick={handleClickShowPassword}
+                       onMouseDown={handleMouseDownPassword}
+                       edge="end"
+                     >
+                       {showPassword ? <VisibilityOff /> : <Visibility />}
+                     </IconButton>
+                   </InputAdornment>
+                 ),
+               }}
              />
              <Button
                type="submit"
