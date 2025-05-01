@@ -86,6 +86,6 @@ class LeaveRequest(models.Model):
         if self.start_date and self.end_date and self.end_date >= self.start_date:
             # Calculate inclusive days: (end - start) + 1 day
             return (self.end_date - self.start_date).days + 1
-        return 0 # Or None if you prefer, but 0 might be safer for frontend display
+        return 0 # Or None if prefer, but 0 might be safer for frontend display
 
     # Add validation logic later if needed (e.g., end_date >= start_date)

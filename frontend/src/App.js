@@ -15,6 +15,7 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import LeaveDashboardPage from './features/leave/pages/LeaveDashboardPage'; // <-- Import Leave Page
 import NoticeDashboardPage from './features/notice/pages/NoticeDashboardPage'; 
+import NotFoundPage from './pages/NotFoundPage';  
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchUserDetails,
@@ -126,6 +127,7 @@ function App() {
             <Route path="tasks" element={<TasksPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="notices" element={<NoticeDashboardPage />} /> {/* <-- ADD NOTICE ROUTE */}
+            <Route path="*" element={<NotFoundPage />} />
 
 
             <Route 
