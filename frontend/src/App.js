@@ -16,6 +16,10 @@ import SettingsPage from './pages/SettingsPage';
 import LeaveDashboardPage from './features/leave/pages/LeaveDashboardPage'; // <-- Import Leave Page
 import NoticeDashboardPage from './features/notice/pages/NoticeDashboardPage'; 
 import NotFoundPage from './pages/NotFoundPage';  
+// --- Import Password Reset Pages ---
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordConfirmPage from './pages/ResetPasswordConfirmPage';
+// --- End Import ---
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchUserDetails,
@@ -108,9 +112,15 @@ function App() {
     <ThemeProviderWrapper>
       <Router>
         <Routes>
+          {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} /> 
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordConfirmPage />} />
 
+          {/* Redirect root to dashboard if authenticated, else to login */}
+          <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          {/* Protected Routes */}
           <Route 
             path="/" 
             element={
@@ -127,13 +137,12 @@ function App() {
             <Route path="tasks" element={<TasksPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="notices" element={<NoticeDashboardPage />} /> {/* <-- ADD NOTICE ROUTE */}
-            <Route path="*" element={<NotFoundPage />} />
 
-
+            {/* Manager/Admin Only Routes */}
             <Route 
               path="attendance" 
               element={
-                <ProtectedRoute requiredRole="manager">
+                <ProtectedRoute requiredRole={['manager', 'admin', 'hr', 'director']}> {/* Allow multiple roles */}
                   <AttendanceDashboard />
                 </ProtectedRoute>
               } 
@@ -141,14 +150,22 @@ function App() {
              <Route 
               path="reports" 
               element={
-                <ProtectedRoute requiredRole="manager">
+                <ProtectedRoute requiredRole={['manager', 'admin', 'hr', 'director']}> {/* Allow multiple roles */}
                   <ReportsPage />
                 </ProtectedRoute>
               } 
             />
+            {/* Add other role-specific routes here */}
+
+            {/* Catch-all for authenticated users */}
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
-          
-          <Route path="*" element={<div>Page Not Found</div>} />
+
+          {/* Catch-all for non-authenticated routes (should ideally redirect to login) */}
+          {/* <Route path="*" element={<Navigate to="/login" replace />} /> */}
+          {/* Or keep a generic 404 if preferred */}
+           <Route path="*" element={<NotFoundPage />} />
+
         </Routes>
       </Router>
     </ThemeProviderWrapper>

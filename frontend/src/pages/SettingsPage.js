@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  Typography, 
-  Box, 
-  Paper, 
-  Divider, 
+import React, { useState, useEffect } from 'react'; // Import useEffect
+import { useSelector } from 'react-redux'; // Import useSelector
+import { selectUser } from '../redux/employeeSlice'; // Import the user selector
+import {
+  Typography,
+  Box,
+  Paper,
+  Divider,
   Switch,
   List,
   ListItem,
@@ -17,14 +19,27 @@ import {
 } from '@mui/material';
 
 function SettingsPage() {
-  // Sample settings state
+  const currentUser = useSelector(selectUser); // Get user data from Redux
+
+  // Initialize state, using user email from Redux if available
   const [settings, setSettings] = useState({
     notifications: true,
     darkModeSystem: true,
     autoSave: true,
-    email: 'user@example.com',
+    email: currentUser?.email || '', // Use user's email, default to empty string
     language: 'English'
   });
+
+  // Update email in state if currentUser changes (e.g., after initial load)
+  useEffect(() => {
+    if (currentUser?.email && settings.email !== currentUser.email) {
+      setSettings(prevSettings => ({
+        ...prevSettings,
+        email: currentUser.email
+      }));
+    }
+  }, [currentUser, settings.email]);
+
 
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -37,7 +52,15 @@ function SettingsPage() {
 
   const handleSaveChanges = (e) => {
     e.preventDefault();
-    // Here you would save the settings to your backend
+    // Here you would save the settings (excluding email if it's not editable) to your backend
+    // Example: saveSettings({ notifications: settings.notifications, language: settings.language });
+    console.log("Saving settings:", {
+        notifications: settings.notifications,
+        darkModeSystem: settings.darkModeSystem,
+        autoSave: settings.autoSave,
+        language: settings.language
+        // Email is typically not changed here directly
+    });
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
   };
@@ -118,7 +141,10 @@ function SettingsPage() {
                 fullWidth
                 label="Email Address"
                 value={settings.email}
-                onChange={(e) => setSettings({...settings, email: e.target.value})}
+                // onChange={(e) => setSettings({...settings, email: e.target.value})} // Email usually not directly editable here
+                InputProps={{
+                  readOnly: true, // Make email read-only
+                }}
                 sx={{ mb: 2 }}
               />
               <TextField

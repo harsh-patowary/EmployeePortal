@@ -142,30 +142,14 @@ const employeeSlice = createSlice({
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user'); // Ensure user is cleared
+      console.log("Redux: Logout action dispatched, state and localStorage cleared."); // Log
     },
     // You might want to consolidate logout logic into one action or ensure both are complete
-    logoutUser: (state) => {
-        state.user = null;
-        state.isAuthenticated = false;
-        state.teamMembers = [];
-        state.allEmployees = [];
-        state.loadingTeam = 'idle';
-        state.errorTeam = null;
-        state.loadingAllEmployees = 'idle';
-        state.errorAllEmployees = null;
-        state.loading = 'idle';
-        state.error = null;
-        // Also clear localStorage here if this action is used
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchUserDetails.pending, (state) => {
         state.loading = 'pending';
-        state.isAuthenticated = false; // Assume not authenticated until fetch succeeds
         state.user = null; // Clear previous user data while fetching
       })
       .addCase(fetchUserDetails.fulfilled, (state, action) => {
@@ -184,6 +168,7 @@ const employeeSlice = createSlice({
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
+        console.error("Redux: fetchUserDetails rejected:", action.payload);
       })
       // Manager Team
       .addCase(fetchManagerTeam.pending, (state) => {
@@ -207,15 +192,18 @@ const employeeSlice = createSlice({
       // All Employees
       .addCase(fetchAllEmployees.pending, (state) => {
           state.loadingAllEmployees = 'pending';
+          state.errorAllEmployees = null; // Clear previous error
       })
       .addCase(fetchAllEmployees.fulfilled, (state, action) => {
           state.loadingAllEmployees = 'succeeded';
-          state.allEmployees = action.payload;
+          state.allEmployees = action.payload || []; // Assign payload correctly
           state.errorAllEmployees = null;
       })
       .addCase(fetchAllEmployees.rejected, (state, action) => {
           state.loadingAllEmployees = 'failed';
-          state.errorAllEmployees = action.payload;
+          state.errorAllEmployees = action.payload || action.error.message;
+          state.allEmployees = []; // Clear on failure
+          console.error("Redux: fetchAllEmployees rejected:", action.payload || action.error.message);
       });
   }
 });
@@ -229,8 +217,7 @@ export const {
   setLoading,
   setError,
   clearEmployee,
-  logout,
-  logoutUser
+  logout, // Export the consolidated logout action
 } = employeeSlice.actions;
 
 // Selectors

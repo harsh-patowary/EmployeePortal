@@ -1,13 +1,24 @@
 from django.shortcuts import render
 from django.contrib.auth import get_user_model, authenticate
-from rest_framework import generics, permissions, status # Added status
+from rest_framework import generics, permissions, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view, permission_classes
 from apps.employees.models import Employee
-from apps.employees.serializers import RegisterSerializer, UserSerializer, EmployeeSerializer, EmployeeDetailSerializer
+from .serializers import (
+    RegisterSerializer, UserSerializer, EmployeeSerializer, EmployeeDetailSerializer,
+    PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+)
+
+# --- Password Reset Imports ---
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -83,21 +94,18 @@ def get_manager_team(request):
     try:
         employee = Employee.objects.get(user=user)
         print(f"Getting team for manager....... {employee.first_name} {employee.last_name}")
-        # Check if user is a manager
-        if not employee.is_manager and employee.role not in ['manager', 'admin', 'hr', 'director']:
+
+        # Simplified Permission Check: Check role directly
+        allowed_roles = ['manager', 'admin', 'hr', 'director']
+        if employee.role not in allowed_roles:
             return Response(
-                {"error": "You don't have manager permissions"},
-                status=403
+                {"error": "You don't have permission to view teams"},
+                status=status.HTTP_403_FORBIDDEN
             )
-        
-        # Get direct reports (employees where this user is the manager)
+
+        # Get direct reports
         team_members = employee.team_members.all()
-        simplified_team_data = [
-            {'id': member.id, 'name': f"{member.first_name} {member.last_name}"}
-            for member in team_members
-        ]
-        print("Simplified Team Data:", simplified_team_data)
-        # You might want to add additional data or statistics
+
         team_data = {
             'manager': {
                 'id': employee.id,
@@ -114,5 +122,77 @@ def get_manager_team(request):
     except Employee.DoesNotExist:
         return Response(
             {"error": "Employee profile not found"},
-            status=404
+            status=status.HTTP_404_NOT_FOUND
         )
+
+# --- Password Reset API Views ---
+
+class PasswordResetRequestAPIView(generics.GenericAPIView):
+    """
+    API view to request a password reset email.
+    """
+    serializer_class = PasswordResetRequestSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        user = User.objects.get(email=email)
+
+        # Generate token and uid
+        token_generator = PasswordResetTokenGenerator()
+        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+        token = token_generator.make_token(user)
+
+        # Construct frontend reset URL (Adjust domain/port as needed)
+        frontend_url = settings.FRONTEND_URL
+        reset_link = f"{frontend_url}/reset-password/{uidb64}/{token}/"
+
+        # Send email
+        subject = "Password Reset Request"
+        message = f"""
+        Hi {user.username},
+
+        Someone requested a password reset for your account.
+        If this was you, click the link below to set a new password:
+        {reset_link}
+
+        If you didn't request this, please ignore this email.
+
+        Thanks,
+        The Team
+        """
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+            return Response({"message": "Password reset email sent."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"Error sending password reset email: {e}")
+            return Response({"error": "Failed to send password reset email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PasswordResetConfirmAPIView(generics.GenericAPIView):
+    """
+    API view to confirm the password reset using uid and token.
+    """
+    serializer_class = PasswordResetConfirmSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data['user']
+        new_password = serializer.validated_data['new_password']
+
+        # Set the new password
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)

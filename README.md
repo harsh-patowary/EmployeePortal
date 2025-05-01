@@ -74,6 +74,7 @@ This project consists of a Django backend and a React frontend for managing empl
 
 *   **Superuser:** `root` / `toor` (or the one you created)
 *   **CMS Login:** `rk12345` / `admin@123`
+*   **HR Login** `aw93521`/ `hr123` ; `th63996`/ `hr123`; 
 *   **Manager:** `ah95579` / `manager123`
 *   **Employee:** `dc41393` / `employee123`
 
