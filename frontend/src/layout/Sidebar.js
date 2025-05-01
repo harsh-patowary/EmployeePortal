@@ -26,6 +26,7 @@ import TaskIcon from "@mui/icons-material/Task";
 import WorkIcon from "@mui/icons-material/Work";
 import HelpIcon from "@mui/icons-material/Help";
 import EventNoteIcon from '@mui/icons-material/EventNote'; // Example icon for Leave
+import CampaignIcon from '@mui/icons-material/Campaign'; // <-- IMPORT NOTICE ICON
 import { selectIsManager, logout } from "../redux/employeeSlice";
 
 // Fixed width for the drawer
@@ -89,6 +90,7 @@ const getNavItems = () => {
     { name: "Leave Management", icon: <EventNoteIcon />, path: "/leave" }, // <-- ADD LEAVE LINK
     { name: "Projects", icon: <WorkIcon />, path: "/projects" },
     { name: "Tasks", icon: <TaskIcon />, path: "/tasks" },
+    { name: "Notices", icon: <CampaignIcon />, path: "/notices" }, // <-- ADD NOTICES LINK HERE
   ];
   
   // Add manager-specific items if user is a manager
@@ -140,7 +142,12 @@ const getNavItems = () => {
               selected={location.pathname === item.path}
               onClick={() => handleNavigation(item.path)}
               sx={{
-                "&.Mui-selected": {
+                py: 1.2, // Adjust padding if needed
+                px: 3,
+                '&:hover': {
+                  backgroundColor: theme.palette.action.hover,
+                },
+                '&.Mui-selected': {
                   backgroundColor:
                     theme.palette.mode === "dark"
                       ? "rgba(255, 255, 255, 0.08)"
@@ -157,6 +164,7 @@ const getNavItems = () => {
             >
               <ListItemIcon
                 sx={{
+                  minWidth: 40, // Ensure icons align
                   color:
                     location.pathname === item.path
                       ? theme.palette.primary.main
@@ -194,8 +202,9 @@ const getNavItems = () => {
             <ListItem disablePadding>
               <ListItemButton
                 onClick={() => handleNavigation(item.path, item.external)}
+                 sx={{ py: 1.2, px: 3 }} // Consistent padding
               >
-                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.name} />
               </ListItemButton>
             </ListItem>
@@ -206,10 +215,10 @@ const getNavItems = () => {
       <Divider sx={{ my: 1 }} />
 
       {/* Settings and Logout */}
-      <List>
+      <List sx={{ position: 'absolute', bottom: 0, width: '100%' }}> {/* Stick to bottom */}
         <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation("/settings")}>
-            <ListItemIcon>
+          <ListItemButton onClick={() => handleNavigation("/settings")} sx={{ py: 1.2, px: 3 }}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
               <SettingsIcon />
             </ListItemIcon>
             <ListItemText primary="Settings" />
@@ -217,8 +226,8 @@ const getNavItems = () => {
         </ListItem>
 
         <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon sx={{ color: theme.palette.error.main }}>
+          <ListItemButton onClick={handleLogout} sx={{ py: 1.2, px: 3 }}>
+            <ListItemIcon sx={{ minWidth: 40, color: theme.palette.error.main }}>
               <LogoutIcon />
             </ListItemIcon>
             <ListItemText
@@ -234,16 +243,16 @@ const getNavItems = () => {
   return (
     <Box
       component="nav"
-      sx={{ width: { sm: open ? drawerWidth : 0 }, flexShrink: { sm: 0 } }}
+      sx={{ width: { md: open ? drawerWidth : 0 }, flexShrink: { md: 0 } }} // Use md breakpoint for persistent drawer logic
     >
-      {/* Mobile drawer */}
+      {/* Mobile/Tablet drawer */}
       <Drawer
         variant="temporary"
-        open={open}
+        open={open && window.innerWidth < theme.breakpoints.values.md} // Only temporary on smaller screens
         onClose={onClose}
         ModalProps={{ keepMounted: true }} // Better mobile performance
         sx={{
-          display: { xs: "block", sm: "block", md: "none" },
+          display: { xs: "block", md: "none" }, // Show on xs, sm; hide on md+
           "& .MuiDrawer-paper": {
             boxSizing: "border-box",
             width: drawerWidth,
@@ -257,14 +266,16 @@ const getNavItems = () => {
       {/* Desktop drawer */}
       <Drawer
         variant="persistent"
-        open={open}
+        open={open} // Controlled by state
         sx={{
-          display: { xs: "none", sm: "none", md: "block" },
+          display: { xs: "none", md: "block" }, // Hide on xs, sm; show on md+
           "& .MuiDrawer-paper": {
             boxSizing: "border-box",
             width: drawerWidth,
             borderRight: `1px solid ${theme.palette.divider}`,
             boxShadow: open ? "2px 0 10px rgba(0,0,0,0.05)" : "none",
+            position: 'relative', // Ensure it doesn't overlap content weirdly
+            height: '100vh', // Full height
           },
         }}
       >

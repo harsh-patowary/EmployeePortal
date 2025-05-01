@@ -67,10 +67,15 @@ const attendanceService = {
   // Record check-in (No longer needs employeeId in body)
   checkIn: async () => { // Remove employeeId parameter
     try {
-      // Send POST request without a body, backend uses authenticated user
-      const response = await api.post('/attendance/check_in/'); 
-      // Expecting { record: ... } from backend now
-      return response.data; 
+      // Format current time as ISO string and send it in the request
+      const now = new Date();
+      const data = { 
+        date: now.toISOString().split('T')[0], // Just the date part: YYYY-MM-DD
+        check_in: now.toISOString() // Full ISO string for the time
+      };
+      
+      const response = await api.post('/attendance/check_in/', data);
+      return response.data;
     } catch (error) {
       console.error('Error recording check-in:', error);
       throw error;
@@ -80,10 +85,14 @@ const attendanceService = {
   // Record check-out (No longer needs employeeId in body)
   checkOut: async () => { // Remove employeeId parameter
     try {
-      // Send POST request without a body, backend uses authenticated user
-      const response = await api.post('/attendance/check_out/'); 
-      // Expecting { record: ... } from backend now
-      return response.data; 
+      // Format current time as ISO string and send it in the request
+      const now = new Date();
+      const data = {
+        check_out: now.toISOString() // Full ISO string for the time
+      };
+      
+      const response = await api.post('/attendance/check_out/', data);
+      return response.data;
     } catch (error) {
       console.error('Error recording check-out:', error);
       throw error;

@@ -1,61 +1,103 @@
 import React from "react";
-import { useSelector } from "react-redux"; // Import useSelector
+import { useSelector } from "react-redux"; 
 import { Typography, Box, Paper, Grid, useTheme } from "@mui/material";
 import UserDetailsComponent from "../components/UserComponent";
-import { selectUser } from "../redux/employeeSlice"; // Import the user selector
-import AttendanceSummaryWidget from "../features/attendance/components/AttendanceSummaryWidget"; // <-- Import the new widget
+import { selectUser } from "../redux/employeeSlice";
+import AttendanceSummaryWidget from "../features/attendance/components/AttendanceSummaryWidget";
+import LeaveDashboardWidget from "../features/leave/components/LeaveDashboardWidget";
+import NoticeDashboardWidget from "../features/notice/components/NoticeDashboardWidget"; // New widget import
+
+// Widget wrapper component for consistent styling
+const DashboardWidget = ({ children, title, elevation = 0, sx = {} }) => {
+  const theme = useTheme();
+  
+  return (
+    <Paper
+      elevation={elevation}
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 2,
+        overflow: 'hidden',
+        border: `1px solid ${theme.palette.divider}`,
+        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: theme.shadows[4],
+        },
+        ...sx
+      }}
+    >
+      {title && (
+        <Box sx={{ px: 3, pt: 2, pb: 1 }}>
+          <Typography variant="h6">{title}</Typography>
+        </Box>
+      )}
+      <Box sx={{ p: 0, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        {children}
+      </Box>
+    </Paper>
+  );
+};
 
 function DashboardPage() {
-  const theme = useTheme(); // Access theme in your component
-  const user = useSelector(selectUser); // Get user data from Redux
+  const theme = useTheme();
+  const user = useSelector(selectUser);
+
+  // Dashboard widgets configuration
+  // Easy to add new widgets by adding to this array
+  const dashboardWidgets = [
+    {
+      id: 'profile',
+      title: null, // No title needed for user profile
+      content: <UserDetailsComponent user={user} />,
+      sx: {
+        bgcolor: theme.palette.mode === "dark" ? theme.palette.background.paper : theme.palette.primary.light,
+        color: theme.palette.mode === "dark" ? theme.palette.text.primary : theme.palette.primary.contrastText,
+      }
+    },
+    {
+      id: 'attendance',
+      title: null, // Widget has its own title
+      content: <AttendanceSummaryWidget />
+    },
+    {
+      id: 'leave',
+      title: null, // Widget has its own title
+      content: <LeaveDashboardWidget />
+    },
+    { // <-- Add the new widget configuration
+      id: 'notice',
+      title: null, // Widget has its own title
+      content: <NoticeDashboardWidget />
+    }
+    // Add new widgets here easily:
+    // { id: 'tasks', title: 'Tasks', content: <TasksWidget /> }
+  ];
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Dashboard
-      </Typography>
+    <Box sx={{ pb: 4 }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Dashboard
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Welcome to the Employee Management System dashboard. Use the navigation
+          menu to access different features.
+        </Typography>
+      </Box>
 
-      <Typography paragraph>
-        Welcome to the Employee Management System dashboard. Use the navigation
-        menu to access different features.
-      </Typography>
-
+      {/* Widgets Grid */}
       <Grid container spacing={3}>
-        {/* User Profile Card */}
-        <Grid item xs={12} md={6} lg={4}>
-          <Paper
-            sx={{
-              p: 3,
-              height: "100%", // Make cards in the same row have equal height
-              display: "flex", // Added for flex alignment if needed
-              flexDirection: "column", // Added for flex alignment if needed
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? theme.palette.background.paper
-                  : theme.palette.primary.light,
-              color:
-                theme.palette.mode === "dark"
-                  ? theme.palette.text.primary
-                  : theme.palette.primary.contrastText,
-            }}
-          >
-            {/* Pass user data to the component */}
-            <UserDetailsComponent user={user} />
-          </Paper>
-        </Grid>
-
-        {/* Attendance Summary Widget */}
-        <Grid item xs={12} md={6} lg={4}>
-          <AttendanceSummaryWidget />
-        </Grid>
-
-        {/* Add More grid items for other widgets here */}
-        {/* Example:
-        <Grid item xs={12} md={6} lg={4}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <Typography variant="h6">Another Widget</Typography>
-            {/* ... content ... */}
-        </Grid>
+        {dashboardWidgets.map(widget => (
+          <Grid item xs={12} sm={6} md={4} key={widget.id}>
+            <DashboardWidget title={widget.title} sx={widget.sx}>
+              {widget.content}
+            </DashboardWidget>
+          </Grid>
+        ))}
+      </Grid>
     </Box>
   );
 }

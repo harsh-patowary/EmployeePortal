@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from datetime import date, datetime
+from django.utils import timezone  # Import this
 from .models import Attendance
 from .serializers import AttendanceSerializer, AttendanceCreateSerializer
 from apps.employees.models import Employee
@@ -50,40 +51,44 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         try:
             # Find the Employee record linked to the authenticated user
             employee = Employee.objects.get(user=user) 
-            today = date.today()
-            check_in_time = datetime.now().time() # Use timezone.now() if using timezones
+            now = timezone.now()  # Get timezone-aware datetime
+            today = now.date()
+            current_time = now.time()  # Extract the time part
 
             attendance, created = Attendance.objects.get_or_create(
                 employee=employee, # Use the authenticated user's employee record
                 date=today,
                 defaults={
-                    'check_in': check_in_time,
+                    'check_in': current_time,
                     'status': 'present' # Default status on check-in
                 }
             )
 
-            if not created and not attendance.check_in:
-                # If record existed but check_in was null, update it
-                attendance.check_in = check_in_time
-                # Optionally reset status if needed, e.g., if they were marked absent
-                # attendance.status = 'present' 
-                attendance.save()
+            if not created:
+                # If record existed but check_in was null
+                if not attendance.check_in:
+                    attendance.check_in = current_time
+                    # Maybe reset status if needed
+                    if attendance.status in ['absent', 'leave']:
+                        attendance.status = 'present'
+                    attendance.save(update_fields=['check_in', 'status'])
+                # If already checked in, you might want to return the existing record
 
             serializer = self.get_serializer(attendance)
             # Return the updated/created record in the response
             # Frontend expects { record: ... } based on handleCheckIn
-            return Response({'record': serializer.data}) 
+            return Response({'record': serializer.data}, status=status.HTTP_200_OK) 
 
         except Employee.DoesNotExist:
             return Response(
-                {'error': 'Employee profile not found for the logged-in user'}, 
+                {'error': 'Employee record not found'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
         # Add a general exception handler if needed
         except Exception as e:
              print(f"Error during check-in for user {user.username}: {e}")
              return Response(
-                 {'error': 'An unexpected error occurred during check-in.'},
+                 {'error': 'An error occurred during check-in'},
                  status=status.HTTP_500_INTERNAL_SERVER_ERROR
              )
 
