@@ -1,17 +1,26 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Typography,
   Avatar,
   Box,
   Chip,
   useTheme,
-  Divider
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Paper
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import BadgeIcon from '@mui/icons-material/Badge';
+import TaskIcon from '@mui/icons-material/Task';
+import AssignmentLateIcon from '@mui/icons-material/AssignmentLate';
 
 const UserDetailsComponent = ({ user }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
   
   // User data preparation
   const userName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'User';
@@ -38,6 +47,27 @@ const UserDetailsComponent = ({ user }) => {
     hash = Math.abs(hash);
     return colors[hash % colors.length];
   };
+
+  // Task click handler
+  const handleTaskClick = () => {
+    navigate('/tasks');
+  };
+
+  // Sample tasks (just for UI display)
+  const tasks = [
+    {
+      id: 1,
+      title: "Complete quarterly report",
+      priority: "high",
+      deadline: "2025-04-30",
+    },
+    {
+      id: 2,
+      title: "Update project documentation",
+      priority: "medium",
+      deadline: "2025-05-05",
+    }
+  ];
 
   return (
     <Box sx={{ 
@@ -140,7 +170,8 @@ const UserDetailsComponent = ({ user }) => {
         
         <Box sx={{ 
           display: 'flex', 
-          alignItems: 'center'
+          alignItems: 'center',
+          mb: 2
         }}>
           <EmailIcon 
             fontSize="small" 
@@ -158,6 +189,63 @@ const UserDetailsComponent = ({ user }) => {
           >
             {email}
           </Typography>
+        </Box>
+
+        {/* Tasks Section */}
+        <Box sx={{ mt: 'auto' }}>
+          <Typography 
+            variant="subtitle2" 
+            color="text.primary"
+            sx={{ fontWeight: 600, mb: 1 }}
+          >
+            Priority Tasks
+          </Typography>
+          
+          <Paper 
+            variant="outlined" 
+            sx={{ 
+              borderRadius: 1,
+              overflow: 'hidden',
+              cursor: 'pointer',
+              '&:hover': { bgcolor: theme.palette.action.hover }
+            }}
+          >
+            <List disablePadding dense>
+              {tasks.map((task) => (
+                <ListItem 
+                  key={task.id}
+                  divider={task.id !== tasks[tasks.length-1].id}
+                  onClick={handleTaskClick}
+                  sx={{
+                    py: 1,
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    {task.priority === 'high' ? 
+                      <AssignmentLateIcon fontSize="small" color="error" /> : 
+                      <TaskIcon fontSize="small" color="primary" />}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={
+                      <Typography variant="body2" noWrap>
+                        {task.title}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography variant="caption" color="text.secondary">
+                        Due {new Date(task.deadline).toLocaleDateString()}
+                      </Typography>
+                    }
+                    primaryTypographyProps={{ fontWeight: 500 }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
         </Box>
       </Box>
     </Box>

@@ -37,19 +37,19 @@ const externalApps = [
   {
     name: "Email",
     icon: <EmailIcon />,
-    path: "https://mail.example.com",
+    path: "https://mail.google.com",
     external: true,
   },
   {
     name: "Documentation",
     icon: <HelpIcon />,
-    path: "https://docs.example.com",
+    path: "https://docs.google.com",
     external: true,
   },
   {
-    name: "Company Portal",
+    name: "Admin Portal",
     icon: <LayersIcon />,
-    path: "https://portal.example.com",
+    path: "http://127.0.01:8000/admin/",
     external: true,
   },
 ];

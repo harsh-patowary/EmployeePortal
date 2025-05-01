@@ -52,81 +52,92 @@ const LoginPage = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Paper 
-        elevation={5} 
-        sx={{ 
-          p: 4, 
-          mt: 8, 
-          borderRadius: 2,
-          border: `1px solid ${theme => theme.palette.divider}`,
-        }}
-      >
     <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh', // Ensure the box takes full viewport height
+        bgcolor: 'background.default', // Optional: Set a background color
+      }}
+    >
+      <Container component="main" maxWidth="xs">
+        <Paper
+          elevation={5}
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            p: 4,
+            borderRadius: 2,
+            border: `1px solid ${theme => theme.palette.divider}`,
+            // Removed mt: 8 as centering is handled by the outer Box
           }}
         >
           <Box
-            component="img"
-            src={companyLogo}
-            alt="Company Logo"
             sx={{
-              width: 120,
-              height: 'auto',
-              mb: 3
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
-          />
-          
-          <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
-            Employee Portal Login
-          </Typography>
-          
-         {(localError || (reduxError && typeof reduxError === 'string')) && (
-           <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
-             {localError || reduxError}
-           </Alert>
-         )}
-         <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 1 }}>
-           <TextField
-             margin="normal"
-             required
-             fullWidth
-             id="username"
-             label="Username"
-             name="username"
-             autoComplete="username"
-             autoFocus
-             value={username}
-             onChange={(e) => setUsername(e.target.value)}
-           />
-           <TextField
-             margin="normal"
-             required
-             fullWidth
-             name="password"
-             label="Password"
-             type="password"
-             id="password"
-             autoComplete="current-password"
-             value={password}
-             onChange={(e) => setPassword(e.target.value)}
-           />
-           <Button
-             type="submit"
-             fullWidth
-             variant="contained"
-             sx={{ mt: 3, mb: 2 }}
-             disabled={loading}
-           >
-             {loading ? <CircularProgress size={24} /> : 'Sign In'}
-           </Button>
+          >
+            <Box
+              component="img"
+              src={companyLogo}
+              alt="Company Logo"
+              sx={{
+                width: 120,
+                height: 'auto',
+                mb: 3
+              }}
+            />
+
+            <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
+              Employee Portal Login
+            </Typography>
+
+           {(localError || (reduxError && typeof reduxError === 'string')) && (
+             <Alert severity="error" sx={{ width: '100%', mt: 2, mb: 1 }}> {/* Adjusted margin */}
+               {localError || reduxError}
+             </Alert>
+           )}
+           <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 1 }}>
+             <TextField
+               margin="normal"
+               required
+               fullWidth
+               id="username"
+               label="Username"
+               name="username"
+               autoComplete="username"
+               autoFocus
+               value={username}
+               onChange={(e) => setUsername(e.target.value)}
+             />
+             <TextField
+               margin="normal"
+               required
+               fullWidth
+               name="password"
+               label="Password"
+               type="password"
+               id="password"
+               autoComplete="current-password"
+               value={password}
+               onChange={(e) => setPassword(e.target.value)}
+             />
+             <Button
+               type="submit"
+               fullWidth
+               variant="contained"
+               sx={{ mt: 3, mb: 2 }}
+               disabled={loading}
+             >
+               {loading ? <CircularProgress size={24} /> : 'Sign In'}
+             </Button>
+           </Box>
          </Box>
-       </Box>
-       </Paper>
-    </Container>
+         </Paper>
+      </Container>
+    </Box>
   );
 };
 
