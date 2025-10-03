@@ -2,6 +2,20 @@
 
 This project consists of a Django backend and a React frontend for managing employees, attendance, leave, etc.
 
+
+## Application Screenshots
+
+### Dashboard
+![Dashboard Screenshot](ui1.png)
+
+### Leave Management
+![Leave Management Screenshot](ui2.png)
+
+### Reports Dashboard
+![Reports Dashboard Screenshot](ui3.png)
+
+
+
 ## Prerequisites
 
 *   **Python**: Version 3.8+ recommended.
@@ -78,4 +92,7 @@ This project consists of a Django backend and a React frontend for managing empl
 *   **Manager:** `ah95579` / `manager123`
 *   **Employee:** `dc41393` / `employee123`
 
-*(Note: Use these credentials for testing purposes. Ensure they are changed or managed securely in a production environment.)*
+*(Note: Use these credentials for testing purposes. Ensure they are changed or managed securely in a production environment.)*  
+
+---
+
