@@ -58,9 +58,14 @@ export function ThemeProviderWrapper({ children }) {
             : {
                 // Dark mode palette
                 primary: {
-                  main: '#90caf9',
+                  main: '#C5FF00',
                   light: '#e3f2fd',
-                  dark: '#42a5f5',
+                  dark: '#78FF00',
+                },
+                progress:{
+                  main: '#3A00FF',
+                  light: '#006cff',
+                  dark: '#3A00FF',
                 },
                 secondary: {
                   main: '#66bb6a',
@@ -121,3 +126,4 @@ export function ThemeProviderWrapper({ children }) {
     </ColorModeContext.Provider>
   );
 }
+export default ThemeProviderWrapper;
