@@ -15,6 +15,132 @@ This project consists of a Django backend and a React frontend for managing empl
 ![Reports Dashboard Screenshot](ui3.png)
 
 
+## Database Schema
+
+Below is the project's database schema visualised. The diagram shows the main entities and relationships used for users, employees, attendance and leave requests.
+
+![Database schema](schema.png)
+
+<details>
+<summary>PlantUML source</summary>
+
+```plantuml
+@startuml
+' Define skin parameters for better readability
+skinparam classAttributeIconSize 0
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam roundcorner 10
+skinparam shadowing false
+skinparam class {
+        BackgroundColor PaleGreen
+        ArrowColor Navy
+        BorderColor Navy
+}
+skinparam note {
+        BackgroundColor LightYellow
+        BorderColor Gray
+}
+
+' --- Classes ---
+
+class User {
+    + username: string
+    + email: string
+    + first_name: string
+    + last_name: string
+    + is_staff: boolean
+    + is_active: boolean
+    + date_joined: datetime
+    --
+    + set_password(raw_password)
+    + check_password(raw_password)
+    + get_full_name()
+    ' ... other standard User methods ...
+}
+note right of User: Django's built-in User model
+
+class Employee {
+    + eID: string {unique}
+    + first_name: string
+    + last_name: string
+    + email: string {unique}
+    + phone_number: string {unique}
+    + DoB: date (nullable)
+    + position: string
+    + is_manager: boolean <<derived>>
+    + role: string {choices: employee, manager, admin, hr, director}
+    + department: string
+    + salary: decimal
+    + date_hired: date (nullable)
+    + paid_leave_balance: decimal
+    + sick_leave_balance: decimal
+    --
+    + get_full_name(): string
+    + save()
+}
+note right of Employee::role
+    Role defines permissions.
+    is_manager is synced from role.
+end note
+
+class Attendance {
+    + date: date
+    + check_in: datetime (nullable)
+    + check_out: datetime (nullable)
+    + status: string {choices: present, absent, half_day, leave, remote}
+    + notes: text (nullable)
+    + created_at: datetime
+    + updated_at: datetime
+    --
+    + duration(): float (nullable) <<property>>
+}
+note bottom of Attendance
+    unique_together = (employee, date)
+end note
+
+class LeaveRequest {
+    + leave_type: string {choices: paid, sick, unpaid, ...}
+    + start_date: date
+    + end_date: date
+    + reason: text (nullable)
+    + status: string {choices: pending, manager_approved, hr_approved, approved, rejected, cancelled}
+    + manager_approval_timestamp: datetime (nullable)
+    + hr_approval_timestamp: datetime (nullable)
+    + rejection_reason: text (nullable)
+    + created_at: datetime
+    + updated_at: datetime
+    --
+    + duration_days(): int <<property>>
+}
+
+' --- Relationships ---
+
+User "1" -- "1" Employee : user
+Employee "1" -- "*" Attendance : employee
+Employee "1" -- "*" LeaveRequest : employee
+
+' Self-referencing relationship for manager
+Employee "0..1" -- "*" Employee : manager / team_members
+
+' Relationships for approval tracking in LeaveRequest
+Employee "0..1" -- "*" LeaveRequest : approved_by_manager
+Employee "0..1" -- "*" LeaveRequest : approved_by_hr
+
+
+@enduml
+```
+
+</details>
+
+Key entities
+
+- User: Django's built-in authentication user. Stores credentials and basic profile fields.
+- Employee: Extends the User with employment-specific data (employee id, role, department, leave balances, manager link).
+- Attendance: Daily attendance records linked to an employee (check-in/out, status, notes).
+- LeaveRequest: Employee leave requests with type, date range, approval status and timestamps.
+
+
 
 ## Prerequisites
 
@@ -67,12 +193,18 @@ This project consists of a Django backend and a React frontend for managing empl
     cd d:\developement\employee_management\frontend
     ```
 
-2.  **Install Node.js dependencies:**
+2.  **Node dependencies:**
+    *(In the frontend dir)*
+    ```bash
+    .\frontend-requirements.txt
+    ```
+
+3.  **Install Node.js dependencies:**
     ```bash
     npm install
     ```
 
-3.  **Run the frontend development server:**
+4.  **Run the frontend development server:**
     ```bash
     npm start
     ```
